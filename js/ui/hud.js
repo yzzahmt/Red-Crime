@@ -10,6 +10,7 @@
   const U = RC.U;
   const C = RC.Config;
   const D = RC.Draw;
+  const I = RC.Input;
 
   const STATE_TXT = {
     sleep: { t: 'Uyuyor', c: '#8fb7ff', icon: 'zzz' },
@@ -128,6 +129,17 @@
         D.icon(ctx, 'police', x + 26, y + 74, 20);
         D.text(ctx, RC.L('POLİS: {t}', { t: U.formatTime(pc) }), x + 44, y + 80, { size: 15, weight: 'bold', color: Math.floor(t * 4) % 2 ? '#ff5060' : '#6aa0ff' });
       }
+      // Gerilim aşaması
+      if (scene.heat) {
+        const info = scene.heat.info;
+        const hy = y + ph + 6;
+        const fl = scene.heat.flash;
+        ctx.fillStyle = 'rgba(8,10,20,0.82)';
+        U.fillRoundRect(ctx, x, hy, pw, 24, 6);
+        ctx.fillStyle = U.rgba(info.color, 0.25 + fl * 0.5);
+        U.fillRoundRect(ctx, x, hy, 8 + (pw - 8) * ((scene.heat.stage + 1) / 4), 24, 6);
+        D.text(ctx, RC.L(info.name), x + pw / 2, hy + 17, { size: 12, weight: 'bold', align: 'center', color: info.color });
+      }
     },
 
     drawLoot(ctx, scene, w, t) {
@@ -184,7 +196,7 @@
         const dy = y + 10 + list.length * rowH;
         const d = scene.dog;
         D.icon(ctx, 'dog', x + 22, dy + 10, 18, '#e6d3a8');
-        const nm = d.name || 'Karabaş';
+        const nm = d.name || 'Bekçi Köpeği';
         const dt = d.state === 'sleep' ? RC.L('{n} uyuyor', { n: nm }) : d.state === 'chase' ? RC.L('{n} HAVLIYOR!', { n: nm.toLocaleUpperCase('tr-TR') }) : RC.L('{n} tetikte', { n: nm });
         D.text(ctx, dt, x + 42, dy + 15, { size: 12, weight: 'bold', color: d.state === 'chase' ? '#ff3043' : d.state === 'sleep' ? '#8fb7ff' : '#ffc83d' });
       }
@@ -221,7 +233,7 @@
     drawSecurity(ctx, scene, x, t) {
       const W = scene.world;
       if (!W.cameras.length && !W.lasers.length && !W.panel && !(W.motions || []).length && !(W.plates || []).length) return;
-      const y = scene.policeCalled ? 116 : 86;
+      const y = (scene.policeCalled ? 116 : 86) + (scene.heat ? 30 : 0);
       const pw = 190;
       D.panel(ctx, x, y, pw, 40, { r: 10, accent: scene.alarm ? '#ff3043' : scene.secDisabled ? '#3ddc84' : '#ffc83d' });
       let txt;
@@ -274,7 +286,10 @@
       const bw = cols * (slot + 4) + 16;
       const bh = rows * (slot + 4) + 40;
       let y = yb - bh;
-      D.panel(ctx, x, y, bw, bh, { accent: '#8a6a3a' });
+      // Fareyle sürüklenen ganimetin bırakılacağı hedef (bkz. RC.DragLoot)
+      this.bagRect = { x, y, w: bw, h: bh };
+      const dragging = scene.drag && I.hover(x, y, bw, bh);
+      D.panel(ctx, x, y, bw, bh, { accent: dragging ? C.COLORS.gold : '#8a6a3a' });
       D.icon(ctx, 'bag', x + 18, y + 18, 18, '#c49a6a');
       D.text(ctx, RC.L('ÇUVAL {a}/{b}', { a: p.bag.length, b: slots }), x + 34, y + 23, { size: 12, weight: 'bold', color: p.bag.length >= slots ? '#ff8c2e' : '#f2f4ff' });
       D.text(ctx, U.formatMoney(p.bagValue), x + bw - 12, y + 23, { size: 12, align: 'right', color: C.COLORS.gold, weight: 'bold' });

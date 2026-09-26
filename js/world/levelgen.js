@@ -317,7 +317,10 @@
 
       // Döşeme
       if (k === -1) {
-        // bodrum zemini (yukarıda ekli), duvarlar
+        // Bodrum zemini: dış zemin [houseX, houseR] aralığında delik bırakır,
+        // bu yüzden bodrumun kendi katı zemini olmalı. Zemin blokları kadar
+        // derin (y=900'e kadar) tutulur; ince bir levha hızlı düşüşte tünellemeye açıktır.
+        addSolid(houseX, FH, houseW, 900 - FH, { kind: 'basementFloor', floorK: -1 });
         addSolid(houseX, SLAB, WALL, FH - SLAB, { kind: 'wall' });
         addSolid(houseR - WALL, SLAB, WALL, FH - SLAB, { kind: 'wall' });
         f.walk = [innerL + 24, innerR - 24];
@@ -488,6 +491,30 @@
           nc--;
         }
       }
+    }
+
+    /* ------------------------ Dış kapı ------------------------ */
+    // Eve giriş kilitli dış kapıdan: dışarıdan matkap + maymuncukla kırılır
+    // (bkz. Minigames.LockpickGame). İçeriden mandalla açılır.
+    {
+      const fd = {
+        id: W.doors.length,
+        x: houseX + WALL / 2,
+        k: 0,
+        y: 0,
+        h: C.DOOR_H,
+        left: null,
+        right: W.floorByK[0].rooms[0] || null,
+        closed: true,
+        locked: true,
+        exterior: true,
+        openT: 0,
+        lockLevel: 1 + Math.floor(levelIndex / 3),
+        swing: 1,
+      };
+      fd.body = addSolid(houseX, -C.DOOR_H, WALL, C.DOOR_H, { kind: 'door', door: fd, type: 'solid' });
+      W.doors.push(fd);
+      W.frontDoor.door = fd;
     }
 
     /* ------------------------ Mobilya yerleşimi ------------------------ */

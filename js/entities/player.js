@@ -1,5 +1,5 @@
 /* =========================================================================
- *  RED CRIME - Oyuncu: Topaç
+ *  RED CRIME - Oyuncu: Red Crime
  *  Kırmızı top gövde, hırsız maskesi, bere ve insan benzeri kollar.
  *  Yürüme / koşma / çömelme / zıplama / el merdiveni / saklanma /
  *  eşya tutma, çuvala atma, yavaşça bırakma, düşürme, fırlatma, el feneri.
@@ -84,6 +84,7 @@
 
     get carriedKg() {
       let kg = this.held ? this.held.kg : 0;
+      if (this.dragItem) kg += this.dragItem.kg;
       for (const it of this.bag) kg += it.kg * 0.25;
       return kg;
     }
@@ -259,10 +260,22 @@
         this.x = b.x + b.w - 10 - this.w;
         this.vx = 0;
       }
-      if (this.y > 1500) {
-        this.x = W.spawn.x;
-        this.y = -100;
+      // Güvenlik ağı: son sağlam zemine geri al. Eşik dünya sınırlarından
+      // türetilir, böylece bodrum (y > 0) gibi geçerli yeraltı koordinatları
+      // asla tetiklemez. Kamyon yanındaki doğma noktasına ışınlamak ganimet
+      // taşıma açığı yaratıyordu.
+      if (this.onGround && this.ground && this.ground.type === 'solid' && !this.climbing) {
+        this.lastSafeX = this.x;
+        this.lastSafeY = this.y;
+      }
+      if (this.y > b.y + b.h + 400) {
+        const safe = this.lastSafeX != null;
+        this.x = safe ? this.lastSafeX : W.spawn.x - this.w / 2;
+        this.y = safe ? this.lastSafeY : W.spawn.y;
+        this.vx = 0;
         this.vy = 0;
+        this.dropThrough = 0;
+        console.warn('[Red Crime] Oyuncu dünya dışına düştü; son sağlam zemine alındı.');
       }
     }
 

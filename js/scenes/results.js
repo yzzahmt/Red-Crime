@@ -185,7 +185,7 @@
       if (!ok) {
         const msg = this.finalFail
           ? this.attemptsLeft > 0
-            ? RC.L('Reis: "Hedefi tutturamadın. Bir hakkın kaldı Topaç. SON hakkın."')
+            ? RC.L('Reis: "Hedefi tutturamadın. Bir hakkın kaldı Red Crime. SON hakkın."')
             : RC.L('Reis: "İkinci kez... Köprü altına gel. Konuşacağız."')
           : RC.L('Reis: "En az {v} demiştim. Bu işin parası yatmaz, sözleşme feshedildi."', { v: U.formatMoney(this.cfg.target) });
         D.text(ctx, msg, w / 2, h - 104, { size: 15, align: 'center', color: '#ff8c2e', weight: 'bold' });
@@ -253,7 +253,7 @@
       g.addColorStop(1, k ? '#0a1440' : '#3a0a14');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
-      // Parmaklıklar arkasında Topaç
+      // Parmaklıklar arkasında Red Crime
       const cx = w / 2;
       const cy = h * 0.46;
       D.character(ctx, {

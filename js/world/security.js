@@ -209,17 +209,20 @@
           cam.detect = Math.max(0, cam.detect - dt);
           continue;
         }
+        // Gerilim yükseldikçe kameralar hızlanır, uçlardaki bekleme kısalır:
+        // kör nokta pencereleri daralır.
+        const camMul = scene.heatFx ? scene.heatFx.cam : 1;
         if (cam.pause > 0) cam.pause -= dt;
         else {
-          cam.angle += cam.sweep * cam.speed * dt;
+          cam.angle += cam.sweep * cam.speed * camMul * dt;
           if (cam.angle > cam.a1) {
             cam.angle = cam.a1;
             cam.sweep = -1;
-            cam.pause = 1.1;
+            cam.pause = 1.1 / camMul;
           } else if (cam.angle < cam.a0) {
             cam.angle = cam.a0;
             cam.sweep = 1;
-            cam.pause = 1.1;
+            cam.pause = 1.1 / camMul;
           }
         }
         let sees = false;
@@ -324,7 +327,13 @@
 
     /** Alarmı başlat */
     trigger(scene, x, y, reason) {
-      if (scene.alarm || scene.secDisabled) return;
+      if (scene.alarm || scene.secDisabled || scene.secGraceT > 0) return;
+      // İlk ihlal izlenen sistemde sessiz alarmdır; aynı sensör bir sonraki
+      // karede sesli alarmı tetiklemesin diye kısa bir ek süre tanınır.
+      if (scene.heat && scene.heat.trySilentAlarm(reason)) {
+        scene.secGraceT = 5;
+        return;
+      }
       scene.alarm = true;
       scene.alarmT = 0;
       scene.stats.alarms = (scene.stats.alarms || 0) + 1;

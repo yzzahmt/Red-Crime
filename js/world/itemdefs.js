@@ -143,7 +143,7 @@
       ctx.fillStyle = c[1];
       ctx.font = `bold ${Math.round(h * 0.38)}px Arial`;
       ctx.textAlign = 'center';
-      ctx.fillText('₺', w / 2, h * 0.82);
+      ctx.fillText('$', w / 2, h * 0.82);
     },
     coins(ctx, w, h, c) {
       const n = 4;
@@ -248,7 +248,7 @@
       ctx.fillStyle = U.shade(c[0], -0.45);
       ctx.font = `bold ${Math.round(h * 0.35)}px Arial`;
       ctx.textAlign = 'center';
-      ctx.fillText(c[2] || '₺', w * 0.2, h * 0.92);
+      ctx.fillText(c[2] || '$', w * 0.2, h * 0.92);
     },
     cigarbox(ctx, w, h, c) {
       box(ctx, 0, h * 0.25, w, h * 0.75, c[0], 2);
@@ -1641,7 +1641,7 @@
     copper: [['#c9733a', '#8a4a20'], ['#b8864a', '#6a4a20']],
     cheese: [['#ffd24a'], ['#f5e0a0']],
     garden: [['#e8283c', '#4a7ad0'], ['#2a5db0', '#3a8f4a'], ['#ff8c2e', '#6b3cc2']],
-    cash: [['#5fbf6a', '#e8e0c8', '₺'], ['#5fa86a', '#e8e0c8', '$'], ['#6a8fd0', '#e8e0c8', '€']],
+    cash: [['#5fbf6a', '#e8e0c8', '$'], ['#5fa86a', '#e8e0c8', '$'], ['#4f8f5a', '#e8e0c8', '$']],
     fur: [['#8a1b2a', '#ffd24a', '#2a5db0'], ['#2a5db0', '#ffd24a', '#e8283c'], ['#2d7a3e', '#ffd24a', '#e8283c']],
     tile: [['#1c4fd1', '#c23a2b'], ['#1c8a8a', '#1c4fd1'], ['#c23a2b', '#2d7a3e']],
     white: [['#f5f5f5', '#c23a2b'], ['#f5f5f5', '#2a5db0']],
@@ -1843,13 +1843,34 @@
   ];
 
   /** Kasadan çıkan özel ganimet */
+  /*
+   * Kasa içeriği. tier: listeye girdiği en düşük bölüm indeksi.
+   * market: değer piyasa (karaborsa alım) fiyatıdır; bölüm çarpanı ve nadirlik
+   * çarpanı uygulanmaz. appraise: ekspertiz çarpanı (bkz. Item) değeri oynatır.
+   * Değerler USD, karaborsa (fence) alım fiyatı: perakendenin kabaca %30-60'ı.
+   */
   const SAFE_LOOT = [
-    { id: 'safe_cash', name: 'Deste Deste Nakit', draw: 'cash', w: 24, h: 16, val: [6000, 15000], kg: 0.5, mat: 'paper', small: true, pal: P.cash },
-    { id: 'safe_gold', name: 'Kasa Altını', draw: 'goldbar', w: 26, h: 12, val: [14000, 22000], kg: 1, mat: 'metal', small: true, pal: [['#ffd24a']] },
-    { id: 'safe_diamond', name: 'Kasa Elması', draw: 'gem', w: 14, h: 14, val: [12000, 26000], kg: 0.02, mat: 'glass', small: true, pal: [['#e8f5ff'], ['#e8283c'], ['#3ddc84']] },
-    { id: 'family_necklace', name: 'Aile Yadigârı Kolye', draw: 'necklace', w: 22, h: 18, val: [18000, 32000], kg: 0.2, mat: 'metal', small: true, pal: [['#ffd24a', '#e8283c', '#fff']] },
-    { id: 'deed', name: 'Tapu Senedi', draw: 'diploma', w: 26, h: 20, val: [8000, 16000], kg: 0.1, mat: 'paper', small: true, pal: [['#e8d9a8']] },
+    { id: 'safe_cash', name: 'Bantlı Nakit Deste', draw: 'cash', w: 24, h: 16, val: [6000, 15000], kg: 0.5, mat: 'paper', small: true, pal: P.cash, tier: 0, w8: 3 },
+    { id: 'safe_gold', name: 'Kasa Altını', draw: 'goldbar', w: 26, h: 12, val: [14000, 22000], kg: 1, mat: 'metal', small: true, pal: [['#ffd24a']], tier: 0, w8: 2 },
+    { id: 'safe_diamond', name: 'Kasa Elması', draw: 'gem', w: 14, h: 14, val: [12000, 26000], kg: 0.02, mat: 'glass', small: true, pal: [['#e8f5ff'], ['#e8283c'], ['#3ddc84']], tier: 0, w8: 2 },
+    { id: 'family_necklace', name: 'Aile Yadigârı Kolye', draw: 'necklace', w: 22, h: 18, val: [18000, 32000], kg: 0.2, mat: 'metal', small: true, pal: [['#ffd24a', '#e8283c', '#fff']], tier: 0, w8: 1.5 },
+    { id: 'deed', name: 'Tapu Senedi', draw: 'diploma', w: 26, h: 20, val: [8000, 16000], kg: 0.1, mat: 'paper', small: true, pal: [['#e8d9a8']], tier: 0, w8: 1.5 },
+    // --- Üst düzey (bölüm 4+) ---
+    { id: 'bearer_bonds', name: 'Hamiline Yazılı Tahvil', draw: 'diploma', w: 26, h: 20, val: [25000, 60000], kg: 0.2, mat: 'paper', small: true, pal: [['#cfe3c4']], tier: 3, w8: 1, market: true, appraise: true },
+    { id: 'graded_watch', name: 'Sertifikalı Koleksiyon Saati', draw: 'watch', w: 14, h: 20, val: [40000, 140000], kg: 0.15, mat: 'metal', small: true, pal: [['#e6e6ea', '#0b2a4a'], ['#ffd24a', '#1a1a1a']], tier: 3, w8: 0.8, market: true, appraise: true },
+    { id: 'fine_jewelry', name: 'Pırlanta Gerdanlık', draw: 'necklace', w: 22, h: 18, val: [30000, 110000], kg: 0.2, mat: 'metal', small: true, pal: [['#e8e8f0', '#bfe8ff', '#fff']], tier: 3, w8: 0.8, market: true, appraise: true },
+    // --- Koleksiyon ve şifreli donanım (bölüm 7+) ---
+    { id: 'graded_coin', name: 'Derecelendirilmiş Nadir Sikke', draw: 'coins', w: 14, h: 12, val: [20000, 120000], kg: 0.03, mat: 'metal', small: true, pal: [['#ffd24a'], ['#e6e6ea']], tier: 6, w8: 0.6, market: true, appraise: true },
+    { id: 'cold_wallet', name: 'Şifreli Donanım Cüzdanı', draw: 'hdd', w: 18, h: 12, val: [40000, 300000], kg: 0.1, mat: 'electronic', small: true, pal: [['#1a1a1e', '#3ddc84', '#c0c4cc']], tier: 6, w8: 0.4, market: true, appraise: true },
+    // --- Kurumsal kasalar (bölüm 11+) ---
+    { id: 'gold_kilo', name: '1 kg Külçe Altın', draw: 'goldbar', w: 28, h: 13, val: [85000, 98000], kg: 1, mat: 'metal', small: true, pal: [['#ffcf3a']], tier: 10, w8: 0.9, market: true },
+    { id: 'loose_diamonds', name: 'Sertifikalı Pırlanta Kesesi', draw: 'gem', w: 14, h: 14, val: [60000, 280000], kg: 0.05, mat: 'glass', small: true, pal: [['#f2fbff']], tier: 10, w8: 0.5, market: true, appraise: true },
   ];
+
+  /** Bölüme göre kasadan çıkabilecek eşyalar */
+  function safeLootFor(levelIndex) {
+    return SAFE_LOOT.filter((d) => (d.tier || 0) <= levelIndex);
+  }
 
   const KEY_ITEM = { id: 'safe_key', name: 'Kasa Anahtarı', draw: 'keyitem', w: 20, h: 12, val: [0, 0], kg: 0.05, mat: 'metal', small: true, isKey: true, pal: [['#ffd24a']] };
 
@@ -1911,6 +1932,7 @@
     PALETTES: P,
     LIST: ITEMS,
     SAFE_LOOT,
+    safeLootFor,
     KEY: KEY_ITEM,
     BY_ID,
     poolFor,

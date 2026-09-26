@@ -1,5 +1,5 @@
 /* =========================================================================
- *  RED CRIME - Bekçi köpeği Karabaş
+ *  RED CRIME - Bekçi köpeği
  *  Bahçede uyur; sesle uyanır, oyuncuyu görünce havlar (havlaması ev
  *  sahiplerini uyandırır) ve kovalar. Isırırsa oyuncu elindekini düşürür.
  * ========================================================================= */

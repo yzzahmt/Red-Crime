@@ -68,7 +68,7 @@
         this.done = true;
         RC.Game.fade.speed = t > 6 ? 6 : 3;
         RC.Game.go('heist', { level: this.level, plan: this.plan, world: this.pworld });
-        setTimeout(() => (RC.Game.fade.speed = 3), 800);
+        RC.Game.later(0.8, () => (RC.Game.fade.speed = 3), null);
       }
     },
     render(ctx) {

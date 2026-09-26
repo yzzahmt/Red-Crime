@@ -110,7 +110,7 @@
         ctx.globalAlpha = U.clamp01(a);
         D.panel(ctx, px, py, pw, 84, { accent: '#3ddc84' });
         D.text(ctx, 'HAZIRSIN!', w / 2, py + 32, { size: 20, font: C.FONT_TITLE, align: 'center', color: '#3ddc84' });
-        D.text(ctx, 'Nuri Hoca üst kattaki yatak odasında uyuyor. Kasa anahtarını bul,', w / 2, py + 54, { size: 14, align: 'center', color: '#dfe3f5' });
+        D.text(ctx, 'Emekli Öğretmen üst kattaki yatak odasında uyuyor. Kasa anahtarını bul,', w / 2, py + 54, { size: 14, align: 'center', color: '#dfe3f5' });
         D.text(ctx, 'ganimeti kamyona yükle ve süre bitmeden E ile kaç.', w / 2, py + 72, { size: 14, align: 'center', color: '#dfe3f5' });
         ctx.globalAlpha = 1;
         return;

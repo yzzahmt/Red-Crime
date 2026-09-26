@@ -71,8 +71,9 @@
       if (guard) this.buildPatrol();
     }
 
+    /** Zorluk ayarı x gerilim aşaması çarpanları (bkz. RC.Heat) */
     get diff() {
-      return this.scene.diff;
+      return this.scene.diffEff || this.scene.diff;
     }
     get headY() {
       return this.state === 'sleep' && this.bed ? this.bed.y + 16 : this.y - R * 2 + 6;

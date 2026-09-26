@@ -1,7 +1,7 @@
 /* =========================================================================
  *  RED CRIME - Ana menü, Ayarlar, Nasıl Oynanır
  *  Ortak animasyonlu menü arka planı: gece şehri, çatıda el feneriyle
- *  etrafı tarayan Topaç, projektörler, yağmur, közler.
+ *  etrafı tarayan Red Crime, projektörler, yağmur, közler.
  * ========================================================================= */
 (function (RC) {
   'use strict';
@@ -67,7 +67,7 @@
       ctx.fillStyle = '#161a33';
       ctx.fillRect(0, roofY, w, 4);
       if (!opts.noHero) {
-        // Topaç çatı kenarında oturuyor, el feneriyle tarıyor
+        // Red Crime çatı kenarında oturuyor, el feneriyle tarıyor
         const hx = w * 0.14;
         const hy = roofY - 26;
         const aim = -0.4 + Math.sin(t * 0.8) * 0.5;

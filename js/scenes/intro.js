@@ -1,7 +1,7 @@
 /* =========================================================================
  *  RED CRIME - Açılış
  *  1) Splash: "Başlamak için tıkla" (tarayıcı sesi açmak için etkileşim ister)
- *  2) Sinematik açılış: yağmurlu şehir, şimşek, çatıda koşan Topaç,
+ *  2) Sinematik açılış: yağmurlu şehir, şimşek, çatıda koşan Red Crime,
  *     polis projektörü, harf harf düşen RED CRIME logosu, glitch efektleri.
  * ========================================================================= */
 (function (RC) {
@@ -275,7 +275,7 @@
         ctx.restore();
       }
 
-      // Topaç: sahneye yuvarlanır, zıplar, göz kırpar
+      // Red Crime: sahneye yuvarlanır, zıplar, göz kırpar
       if (t > 2.4) {
         const k = U.clamp01((t - 2.4) / 2);
         let hx = U.lerp(-80, w * 0.42, U.ease.outCubic(k));

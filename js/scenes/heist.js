@@ -50,20 +50,22 @@
       this.residents = W.bedSpots.map((bs, i) => new RC.Resident(this, bs.resident, bs, i));
       // Bekçiler
       const GUARDS = [
-        { name: 'Bekçi Ali', color: '#2a3a6a', cap: '#1b2a55', mustache: true, sleepDepth: 1 },
-        { name: 'Bekçi Hasan', color: '#3a4a3a', cap: '#1b2a55', mustache: false, sleepDepth: 1 },
+        { name: 'Özel Güvenlik', color: '#2a3a6a', cap: '#1b2a55', mustache: true, sleepDepth: 1 },
+        { name: 'Vardiya Amiri', color: '#3a4a3a', cap: '#1b2a55', mustache: false, sleepDepth: 1 },
       ];
       (W.guardSpawns || []).forEach((gs, i) => {
         const room = W.floorByK[0].rooms[0];
         this.residents.push(new RC.Resident(this, GUARDS[i % 2], { furn: null, room, k: gs.k, x: gs.x }, this.residents.length, true));
       });
       this.dog = W.dog ? new RC.Dog(this, W.dog) : null;
-      if (this.dog) this.dog.name = cfg.dogName || 'Karabaş';
+      if (this.dog) this.dog.name = cfg.dogName || 'Bekçi Köpeği';
       RC.Security.init(this);
       this.mg = null;
+      this.secGraceT = 0;
 
+      this.resetRunState();
       this.time = 0;
-      this.timeLeft = C.HEIST_TIME * this.diff.time + (RC.Save.hasPerm('bribe') ? 45 : 0);
+      this.timeLeft = C.heistTime(lvl) * this.diff.time + (RC.Save.hasPerm('bribe') ? 45 : 0);
       this.totalTime = this.timeLeft;
       this.loaded = [];
       this.loadedValue = 0;
@@ -95,6 +97,7 @@
       this.slowmo = 1;
       this.endFade = 0;
 
+      this.heat = new RC.Heat(this);
       RC.HUD.reset();
       RC.Audio.playMusic('heist');
       RC.Audio.stopAllLoops();
@@ -111,9 +114,70 @@
       if (this.tutorial) this.state = 'play';
     },
 
+    /**
+     * Bir önceki soygundan kalan her bayrak burada sıfırlanır. Sahne nesnesi
+     * tekil olduğundan enter() içinde atanmayan alanlar yeni bölüme taşınıyordu
+     * (yıldız bildirimi çıkmaması, önceki planın matkap/stetoskop/polis gecikmesi vb.).
+     */
+    resetRunState() {
+      this.prevState = null;
+      this.leftBehind = false;
+      this.escapeTimeUp = false;
+      this.caughtBy = null;
+      this.caughtByPolice = false;
+      this.lastStars = 0;
+      this.warned30 = false;
+      this.lastBeep = null;
+      this.policeDelay = 0;
+      this.stethoscope = false;
+      this.drill = false;
+      this.hackPanelT = 0;
+      this.muzzleT = 0;
+      this.drag = null;
+      RC.DragLoot.hover = null;
+    },
+
     exit() {
       RC.Audio.stopLoop('engine');
       RC.Audio.stopLoop('rain');
+      this.releaseWorld();
+    },
+
+    /**
+     * Dünyayı ve ona bağlı her şeyi bırakır: oda/mobilya tuval önbellekleri
+     * (GPU belleği), ızgaralar, varlıklar. Ayarlar ekranına "keep" ile geçişte
+     * exit() çağrılmaz, bu yüzden devam etme (resume) bozulmaz.
+     */
+    releaseWorld() {
+      const W = this.world;
+      if (W) {
+        for (const room of W.rooms || []) {
+          if (room.cache) room.cache.width = room.cache.height = 0;
+          room.cache = null;
+        }
+        if (W.grid) W.grid.map.clear();
+        if (W.itemGrid) W.itemGrid.map.clear();
+      }
+      RC.Furniture.clearCache();
+      if (RC.WorldRender.world === W) RC.WorldRender.world = null;
+      if (this.lighting && this.lighting.canvas) this.lighting.canvas.width = this.lighting.canvas.height = 0;
+      this.world = null;
+      this.player = null;
+      this.residents = [];
+      this.dog = null;
+      this.activeItems = null;
+      this.flyers = [];
+      this.noiseEvents = [];
+      this.lighting = null;
+      this.particles = null;
+      this.tutorial = null;
+      this.mg = null;
+      this.minigame = null;
+      this.pauseMenu = null;
+      this.drag = null;
+      this.heat = null;
+      RC.DragLoot.hover = null;
+      RC.DragLoot.setCursor('');
     },
 
     /* ==================================================================
@@ -122,6 +186,7 @@
     makeNoise(x, y, loud, src) {
       if (loud <= 0) return;
       this.noiseEvents.push({ x, y, loud, src });
+      if (this.heat && src !== 'bark') this.heat.noteNoise(x, y, loud);
       const p = this.player;
       if (src !== 'bark' && U.dist(x, y, p.cx, p.cy) < 260) this.playerNoise = Math.max(this.playerNoise, loud);
       if (RC.Save.settings.noiseRings && loud > 0.08) {
@@ -207,12 +272,14 @@
       return null;
     },
 
-    callPolice(r, secs) {
+    /** quiet=true: sessiz alarm (siren ve bildirim yok; bildirimi çağıran yapar) */
+    callPolice(r, secs, quiet = false) {
       this.policeCalled = true;
       this.policeT = Math.min(this.timeLeft, (secs || 60) * this.diff.time + (this.policeDelay || 0));
-      if (this.policeDelay) setTimeout(() => this.radio('lookout', 'Polisi yanlış adrese yolladım, biraz vaktin var!'), 2500);
-      if (r && !r.isGuard) setTimeout(() => r.say(U.pick(C.LINES.police), 2), 1200);
-      this.toast(RC.L('911 ARANDI! Kaçmak için 1 dakikan var!'), '#ff3043');
+      if (this.policeDelay) RC.Game.later(2.5, () => this.radio('lookout', 'Polisi yanlış adrese yolladım, biraz vaktin var!'));
+      if (r && !r.isGuard) RC.Game.later(1.2, () => r.say(U.pick(C.LINES.police), 2));
+      if (quiet) return;
+      this.toast(RC.L('911 ARANDI! Kaçmak için {t} var!', { t: U.formatTime(this.policeT) }), '#ff3043');
       RC.Audio.play('alarm', { vol: 0.8 });
     },
 
@@ -396,8 +463,9 @@
       this.camera.shake(0.3);
       const n = 5 + Math.min(this.levelIndex, 9) * 2 + (this.cfg.kind === 'bank' ? 14 : this.cfg.kind ? 6 : 0);
       const rng = new U.RNG(Math.floor(Math.random() * 1e6));
+      const pool = RC.Items.safeLootFor(this.levelIndex);
       for (let i = 0; i < n; i++) {
-        const def = rng.pick(RC.Items.SAFE_LOOT);
+        const def = rng.weighted(pool, 'w8');
         const it = new RC.Item(def, s.x + s.w / 2 - def.w / 2, s.y + 20, rng, { valueMul: 1 + this.levelIndex * 0.35, room: W.safeRoom });
         it.k = s.k;
         it.release(U.rand(-180, 180), U.rand(-420, -220), true);
@@ -461,7 +529,7 @@
           r.decoyT = 45;
           r.setTarget(0, W.street.x1 - 150 - r.index * 60);
         }
-        setTimeout(() => this.radio('decoy', 'Sahte ihbar yapıldı. Bekçiler 45 saniye dışarıda!'), 1500);
+        RC.Game.later(1.5, () => this.radio('decoy', 'Sahte ihbar yapıldı. Bekçiler 45 saniye dışarıda!'));
       }
       if (pl.gear === 'stetho') this.stethoscope = true;
       if (pl.gear === 'drill') this.drill = true;
@@ -519,8 +587,13 @@
       // Kapılar
       const d = RC.Doors.nearPlayer(this);
       if (d) {
-        if (d.closed && d.locked) {
-          this.startMinigame(new RC.Minigames.LockpickGame(this, d), 'lockpick', d);
+        if (d.closed && d.locked && d.exterior && p.cx > d.x) {
+          // İçeriden: mandalı çevir, kır-aç gerekmez
+          d.locked = false;
+          RC.Doors.open(this, d, p);
+        } else if (d.closed && d.locked) {
+          // Dış kapı: matkap + maymuncuk. İç kapılar: yalnızca kısa maymuncuk aşaması
+          this.startMinigame(new RC.Minigames.LockpickGame(this, d, { drill: !!d.exterior }), 'lockpick', d);
         } else if (d.closed) {
           RC.Doors.open(this, d, p);
         } else if (!RC.Doors.close(this, d, p)) {
@@ -597,6 +670,8 @@
         } else if (type === 'hack') {
           RC.Security.disable(this, false);
         }
+      } else if (res === 'fail' && type === 'lockpick') {
+        this.toast(RC.L('Matkap uçları bitti. Kilit kırılamadı.'), '#ff3043');
       } else if (res === 'alarm') {
         RC.Security.trigger(this, this.world.panel.x, this.world.panel.y, RC.L('Panel hatalı şifreyle kilitlendi!'));
       }
@@ -797,6 +872,7 @@
       if (this.state !== 'escape' || this.leftBehind) {
         if (!p.hiddenInTruck) p.update(dt);
       }
+      RC.DragLoot.update(this, dt);
 
       // Eşyalar
       for (const it of W.items) {
@@ -847,6 +923,8 @@
       if (this.alarm) danger = Math.max(danger, 0.9);
       for (const c of this.world.cameras) danger = Math.max(danger, c.detect * 0.8);
       this.dangerLevel = U.damp(this.dangerLevel, danger, 4, dt);
+      if (this.secGraceT > 0) this.secGraceT -= dt;
+      if (this.heat && this.state !== 'escape' && this.state !== 'caught') this.heat.update(dt);
       if (this.dangerLevel > 0.55) {
         this.heartT -= dt;
         if (this.heartT <= 0) {
@@ -978,8 +1056,9 @@
           RC.Game.go('heist', { level: this.levelIndex });
         }),
         mk('ANA MENÜ', 'home', () => {
+          // Dünya burada null yapılmaz: kararma sürerken sahne hâlâ çizilir.
+          // Kaynaklar exit() -> releaseWorld() ile geçiş anında bırakılır.
           RC.Audio.setMusicDuck(1);
-          this.world = null;
           RC.Game.go('menu');
         }),
       ]);
@@ -1129,6 +1208,7 @@
       for (const r of this.residents) if (r._ov) r.drawOverlay(ctx, t, r._ov.x, r._ov.y);
       if (this.dog) this.dog.drawOverlay(ctx, t);
       this.drawWorldLabels(ctx, t);
+      RC.DragLoot.drawWorld(ctx, this, t);
       // Uçan eşyalar
       for (const f of this.flyers) {
         if (f.t < 0) continue;
@@ -1307,7 +1387,7 @@
 
   function priceTag(ctx, x, y, it, big) {
     const size = big ? 16 : 13;
-    const txt = it.isKey ? 'KASA ANAHTARI' : U.formatMoney(it.value);
+    const txt = it.isKey ? 'KASA ANAHTARI' : U.formatMoney(it.value) + (it.appraisal !== 1 ? '  ×' + it.appraisal.toFixed(2) : '');
     ctx.font = `bold ${size}px ${C.FONT_UI}`;
     const name = big ? it.name : null;
     const tw = Math.max(ctx.measureText(txt).width, name ? ctx.measureText(name).width * 0.8 : 0);

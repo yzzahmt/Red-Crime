@@ -410,7 +410,9 @@
   function drawFrontDoor(ctx, d) {
     const x = d.x;
     const y = d.y;
-    // Açık kapı kanadı (dışarı doğru açılmış)
+    // Kapı kanadı artık gerçek bir kapı (Doors.draw); eski dekoratif açık kanat
+    // yalnızca kapı nesnesi olmayan eski dünyalar için çizilir.
+    if (!d.door) {
     ctx.fillStyle = '#5b3a24';
     ctx.beginPath();
     ctx.moveTo(x, y - d.h);
@@ -423,6 +425,7 @@
     ctx.lineWidth = 1.5;
     ctx.stroke();
     U.circle(ctx, x - 28, y - d.h / 2, 3, '#d9b04a');
+    }
     // Paspas
     ctx.fillStyle = '#8a3a2a';
     ctx.fillRect(x - 70, y - 4, 60, 4);

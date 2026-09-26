@@ -1,7 +1,7 @@
 # RED CRIME
 
-2B yandan görünümlü, web tabanlı gizlilik/hırsızlık oyunu. Top şeklindeki hırsız Topaç ile
-ev sahibini uyandırmadan 5 dakika içinde en değerli ganimeti kamyona yükle.
+2B yandan görünümlü, web tabanlı gizlilik/hırsızlık oyunu. Sokakta yalnızca "Red Crime" diye bilinen hırsızla
+hedefi uyandırmadan, süre dolmadan en değerli ganimeti kamyona yükle.
 
 ## Çalıştırma
 

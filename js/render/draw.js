@@ -1,6 +1,6 @@
 /* =========================================================================
  *  RED CRIME - Çizim kütüphanesi
- *  - Top karakterler (Topaç, Reis, ev sahipleri) ve insan benzeri kollar
+ *  - Top karakterler (Red Crime, Reis, ev sahipleri) ve insan benzeri kollar
  *  - İkonlar, tuş kapakları, paneller, metin yardımcıları
  * ========================================================================= */
 (function (RC) {
@@ -667,7 +667,7 @@
       ctx.font = 'bold 13px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('₺', 0, 1);
+      ctx.fillText('$', 0, 1);
     },
     key(ctx) {
       ctx.beginPath();

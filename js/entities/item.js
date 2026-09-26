@@ -41,6 +41,8 @@
       this.def = def;
       this.x = x;
       this.y = y;
+      this.restX = x; // dünya dışına düşerse dönülecek son güvenli konum
+      this.restY = y;
       this.w = def.w;
       this.h = def.h;
       this.vx = 0;
@@ -74,8 +76,15 @@
           }
         }
       }
+      // Ekspertiz: aynı model eşyanın kondisyonu/belgesi fiyatı oynatır (0.6x - 1.9x,
+      // düşük değerler daha olası). Piyasa değerli eşyalarda nadirlik bu çarpandan türetilir.
+      this.appraisal = def.appraise && rng ? Math.round((0.6 + Math.pow(rng.next(), 1.7) * 1.3) * 100) / 100 : 1;
+      if (def.market) {
+        const a = this.appraisal;
+        this.rarity = C.RARITY[a >= 1.6 ? 3 : a >= 1.3 ? 2 : a >= 1.05 ? 1 : 0];
+      }
       const base = rng ? rng.float(def.val[0], def.val[1]) : def.val[0];
-      const mul = (opts.valueMul || 1) * this.rarity.mult;
+      const mul = def.market ? this.appraisal : (opts.valueMul || 1) * this.rarity.mult * this.appraisal;
       this.value = this.isKey ? 0 : Math.max(5, Math.round((base * mul) / 10) * 10);
       this.sprite = RC.Items.getSprite(def, this.variant);
     }
@@ -131,12 +140,18 @@
           this.gentle = false;
         }
       }
-      W.itemGrid.update(this);
-      // Dünyanın dışına düştüyse geri al
-      if (this.y > 2000) {
-        this.y = -100;
-        this.x = W.spawn.x;
+      // Dünyanın dışına düştüyse son durduğu yere geri al (kamyon yanına değil)
+      if (this.y > W.bounds.y + W.bounds.h + 400) {
+        this.x = this.restX != null ? this.restX : this.x;
+        this.y = this.restY != null ? this.restY - 2 : W.spawn.y;
+        this.vx = 0;
+        this.vy = 0;
       }
+      if (this.state === 'rest') {
+        this.restX = this.x;
+        this.restY = this.y;
+      }
+      W.itemGrid.update(this);
       // Havuza düştü mü?
       if (W.pool && this.cx > W.pool.x0 && this.cx < W.pool.x1 && this.y + this.h > W.pool.y0 && !this.splashed) {
         this.splashed = true;

@@ -335,16 +335,18 @@ window.RC = window.RC || {};
   /* ---------------------------------------------------------------------
    * Metin
    * ------------------------------------------------------------------- */
+  // Oyunun tek para birimi ABD dolarıdır (USD).
+  U.CURRENCY = '$';
   U.formatMoney = (n) => {
     const v = Math.round(n);
     const s = Math.abs(v)
       .toString()
-      .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return (v < 0 ? '-' : '') + s + ' ₺';
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (v < 0 ? '-' : '') + U.CURRENCY + s;
   };
   U.formatShortMoney = (n) => {
-    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',') + 'M ₺';
-    if (n >= 1e4) return Math.round(n / 1e3) + (RC.I18N && RC.I18N.lang === 'en' ? 'K ₺' : 'B ₺');
+    if (n >= 1e6) return U.CURRENCY + (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M';
+    if (n >= 1e4) return U.CURRENCY + Math.round(n / 1e3) + 'K';
     return U.formatMoney(n);
   };
   U.formatTime = (sec) => {

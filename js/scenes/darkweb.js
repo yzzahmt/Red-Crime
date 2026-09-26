@@ -31,7 +31,7 @@
       RC.Audio.setMusicDuck(0.4);
       this.say(L('> tor bağlantısı kuruluyor...'));
       this.say(L('> şifreli kanal: AÇIK'));
-      this.say(L('> hoş geldin, Topaç. Bakiyeni kontrol et, soru sorma.'));
+      this.say(L('> hoş geldin, Red Crime. Bakiyeni kontrol et, soru sorma.'));
     },
     exit() {
       RC.Audio.setMusicDuck(1);

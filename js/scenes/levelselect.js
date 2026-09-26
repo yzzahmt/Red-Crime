@@ -333,7 +333,7 @@
       ctx.fillStyle = 'rgba(5,6,15,0.6)';
       ctx.fillRect(0, 0, w, h);
       D.text(ctx, 'KARABORSA DÜKKÂNI', w / 2, 72, { size: 40, font: C.FONT_TITLE, align: 'center', color: '#fff', shadow: true });
-      D.text(ctx, 'Reis\'in kuzeni Şevket\'in tezgâhı. "Sorma nereden buldum."', w / 2, 100, { size: 14, align: 'center', color: '#9aa3c7' });
+      D.text(ctx, 'Reis\'in tedarikçisinin tezgâhı. "Sorma nereden buldum."', w / 2, 100, { size: 14, align: 'center', color: '#9aa3c7' });
       D.panel(ctx, w - 260, 36, 230, 48, { r: 10 });
       D.icon(ctx, 'money', w - 236, 60, 22, C.COLORS.gold);
       D.text(ctx, U.formatMoney(RC.Save.progress.wallet), w - 216, 68, { size: 20, font: C.FONT_TITLE, color: C.COLORS.gold });

@@ -73,9 +73,9 @@
    * İKİ HAK DA GİTTİ
    * =================================================================== */
   const EXEC_LINES = [
-    { who: 'boss', text: 'İki kez... İki kez her şeyi mahvettin, Topaç.' },
+    { who: 'boss', text: 'İki kez... İki kez her şeyi mahvettin, Red Crime.' },
     { who: 'hero', text: 'Reis... Bir şans daha ver. Bu sefer olacak, yemin ederim...' },
-    { who: 'boss', text: 'Kara Kemal\'in adamları yolda. Borcu ödeyemedim. Sen de, ben de bittik.' },
+    { who: 'boss', text: 'Tefeci\'nin adamları yolda. Borcu ödeyemedim. Sen de, ben de bittik.' },
     { who: 'boss', text: 'Sana güvenmiştim evlat. En iyi adamım demiştim...' },
     { who: 'boss', text: 'Beceriksiz herif.' },
   ];
@@ -145,7 +145,7 @@
         if (this.phaseT > 2.2) {
           const a = U.clamp01((this.phaseT - 2.2) / 1);
           D.text(ctx, L('OYUN BİTTİ'), w / 2, h / 2 - 20, { size: 64, font: C.FONT_TITLE, align: 'center', color: '#e8283c', alpha: a });
-          D.text(ctx, L('Kara Kemal\'e olan borç hiç ödenmedi. Tüm ilerleme silindi.'), w / 2, h / 2 + 30, { size: 18, align: 'center', color: '#9aa3c7', alpha: a });
+          D.text(ctx, L('Tefeci\'ye olan borç hiç ödenmedi. Tüm ilerleme silindi.'), w / 2, h / 2 + 30, { size: 18, align: 'center', color: '#9aa3c7', alpha: a });
           D.text(ctx, L('Her şey 1. bölümden, köprü altından yeniden başlıyor.'), w / 2, h / 2 + 58, { size: 18, align: 'center', color: '#9aa3c7', alpha: a });
           if (this.phaseT > 3.5) D.text(ctx, L('Devam etmek için bir tuşa bas'), w / 2, h - 60, { size: 16, align: 'center', color: '#5a6284', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
         }
@@ -153,7 +153,7 @@
       }
       bridgeBackdrop(ctx, w, h, t, 1);
       const gy = h - 100;
-      // Topaç diz çökmüş
+      // Red Crime diz çökmüş
       D.character(ctx, {
         x: w * 0.38,
         y: gy - 18,
@@ -213,7 +213,7 @@
    * MUTLU SON + JENERİK + İNDİRİM KODU
    * =================================================================== */
   const END_LINES = [
-    { who: 'boss', text: 'Topaç... Başardın. Kara Kemal\'in borcu kapandı. Artık kimseye borcumuz yok.' },
+    { who: 'boss', text: 'Red Crime... Başardın. Tefeci\'nin borcu kapandı. Artık kimseye borcumuz yok.' },
     { who: 'hero', text: 'Köprü altından Boğaz\'a, Reis. Kim inanırdı?' },
     { who: 'boss', text: 'Ben inandım evlat. İlk günden beri. Sessiz, hızlı, temiz.' },
     { who: 'hero', text: 'Sessiz, hızlı, temiz.' },
@@ -347,7 +347,7 @@
       if (this.phase === 'credits') {
         const credits = [
           ['title', L('TEBRİKLER! OYUNU KAZANDIN!')],
-          ['text', L('Topaç ve Reis köprü altından Boğaz\'daki yalıya taşındı.')],
+          ['text', L('Red Crime ve Reis köprü altından Boğaz\'daki yalıya taşındı.')],
           ['gap', ''],
           ['logo', ''],
           ['gap', ''],
@@ -356,9 +356,9 @@
           ['head', L('OYUN TASARIMI · PROGRAMLAMA · GRAFİK · SES')],
           ['text', C.DEVELOPER],
           ['head', L('BAŞROLDE')],
-          ['text', L('Topaç — sessiz, hızlı, temiz')],
+          ['text', L('Red Crime — sessiz, hızlı, temiz')],
           ['text', L('Reis — köprünün efendisi')],
-          ['text', L('Fare · Kartal · Cemil · Şimşek')],
+          ['text', L('Hacker · Gözcü · Şoför · Dikkat Dağıtıcı')],
           ['gap', ''],
           ['title2', L('Oyunumuzu oynadığınız için teşekkür ederiz!')],
         ];

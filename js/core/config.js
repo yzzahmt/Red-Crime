@@ -20,7 +20,9 @@
     STEP_UP: 22,
     STREET_W: 900,
 
-    HEIST_TIME: 300, // 5 dakika
+    // Soygun süresi karmaşıklığa göre ölçeklenir (sn). Bkz. Config.heistTime()
+    HEIST_TIMES: [300, 480, 600], // 1. bölüm 5 dk, 2. bölüm 8 dk, 3. bölüm 10 dk
+    HEIST_TIME_MAX: 900, // geç dönem kontratlar en fazla 15 dk
     FINAL_ATTEMPTS: 2,
     DEVELOPER: 'Red Crime Studio', // geliştirici adı (jenerikte görünür)
 
@@ -64,12 +66,12 @@
         id: 1,
         name: 'Emekli Öğretmenin Evi',
         short: 'Küçük İki Katlı Ev',
-        desc: 'Mahallenin sessiz köşesinde iki katlı, sevimli bir ev. Emekli öğretmen Nuri Hoca üst kattaki yatak odasında, kapısı kapalı uyur.',
+        desc: 'Mahallenin sessiz köşesinde iki katlı, sevimli bir ev. Emekli Öğretmen üst kattaki yatak odasında, kapısı kapalı uyur.',
         floors: 2,
         basement: false,
         width: 2700,
         garden: 420,
-        residents: [{ name: 'Nuri Hoca', color: '#6f8fd6', cap: '#e8e0c8', mustache: true, sleepDepth: 1.0 }],
+        residents: [{ name: 'Emekli Öğretmen', color: '#6f8fd6', cap: '#e8e0c8', mustache: true, sleepDepth: 1.0 }],
         dog: false,
         items: 240,
         target: 12000,
@@ -89,14 +91,14 @@
       },
       {
         id: 2,
-        name: 'Kasap Rıza\'nın Evi',
+        name: 'Kasabın Evi',
         short: 'Eski İki Katlı Ev',
-        desc: 'Kasap Rıza dükkânın hasılatını eve getirir. Yatak odasının kapısını hep kilitler; eski evin merdivenleri ve döşemesi gıcırdar.',
+        desc: 'Kasap dükkânın hasılatını eve getirir. Yatak odasının kapısını hep kilitler; eski evin merdivenleri ve döşemesi gıcırdar.',
         floors: 2,
         basement: false,
         width: 3200,
         garden: 520,
-        residents: [{ name: 'Rıza Usta', color: '#c94f4f', cap: '#f0f0f0', mustache: true, sleepDepth: 0.95 }],
+        residents: [{ name: 'Kasap', color: '#c94f4f', cap: '#f0f0f0', mustache: true, sleepDepth: 0.95 }],
         dog: false,
         items: 384,
         target: 25000,
@@ -116,14 +118,14 @@
       },
       {
         id: 3,
-        name: 'Doktor Selin\'in Dubleksi',
+        name: 'Doktorun Dubleksi',
         short: 'Dubleks + Bodrum',
-        desc: 'Modern bir dubleks ve gizemli bir bodrum. Doktor Selin kuş uykusu uyur; çalışma odası ve bodrum kilitlidir.',
+        desc: 'Modern bir dubleks ve gizemli bir bodrum. Doktor kuş uykusu uyur; çalışma odası ve bodrum kilitlidir.',
         floors: 2,
         basement: true,
         width: 2900,
         garden: 640,
-        residents: [{ name: 'Dr. Selin', color: '#3fae9a', cap: '#f6c1d8', mustache: false, sleepDepth: 0.85 }],
+        residents: [{ name: 'Doktor', color: '#3fae9a', cap: '#f6c1d8', mustache: false, sleepDepth: 0.85 }],
         dog: false,
         items: 896,
         target: 70000,
@@ -143,14 +145,14 @@
       },
       {
         id: 4,
-        name: 'Kuyumcu Zeki\'nin Evi',
+        name: 'Kuyumcunun Evi',
         short: 'İki Kat + Bodrum · Kameralar',
         desc: 'Kapalıçarşı\'nın en zengin kuyumcusu. Evinde ilk kez güvenlik kameraları ve bir alarm sistemi var. Kamera seni görürse alarm çalar!',
         floors: 2,
         basement: true,
         width: 3000,
         garden: 600,
-        residents: [{ name: 'Zeki Usta', color: '#c9a24a', cap: '#8a1b2a', mustache: true, sleepDepth: 0.9 }],
+        residents: [{ name: 'Kuyumcu', color: '#c9a24a', cap: '#8a1b2a', mustache: true, sleepDepth: 0.9 }],
         dog: false,
         items: 960,
         target: 90000,
@@ -172,14 +174,14 @@
         id: 5,
         name: 'Holding Patronunun Rezidansı',
         short: 'Dört Katlı Rezidans',
-        desc: 'Dört kat, iki sakin, kameralar ve ilk lazer alarmı. Hakan Bey ve Leyla Hanım ayrı katlarda, kilitli odalarda uyur.',
+        desc: 'Dört kat, iki sakin, kameralar ve ilk lazer alarmı. Holding Patronu ve eşi ayrı katlarda, kilitli odalarda uyur.',
         floors: 4,
         basement: false,
         width: 3200,
         garden: 560,
         residents: [
-          { name: 'Hakan Bey', color: '#39406b', cap: '#ffd76a', mustache: true, sleepDepth: 0.9 },
-          { name: 'Leyla Hanım', color: '#a54fa0', cap: '#ffe3f2', mustache: false, sleepDepth: 0.85 },
+          { name: 'Holding Patronu', color: '#39406b', cap: '#ffd76a', mustache: true, sleepDepth: 0.9 },
+          { name: 'Patronun Eşi', color: '#a54fa0', cap: '#ffe3f2', mustache: false, sleepDepth: 0.85 },
         ],
         dog: false,
         items: 1040,
@@ -202,12 +204,12 @@
         id: 6,
         name: 'Koleksiyoncunun Galeri Villası',
         short: 'Üç Katlı Sanat Villası',
-        desc: 'Ünlü sanat koleksiyoncusu Madam Nevra\'nın villası bir müze gibi: duvarlarda başyapıtlar, koridorlarda lazerler, köşelerde kameralar.',
+        desc: 'Ünlü bir sanat koleksiyoncusunun villası bir müze gibi: duvarlarda başyapıtlar, koridorlarda lazerler, köşelerde kameralar.',
         floors: 3,
         basement: false,
         width: 3300,
         garden: 900,
-        residents: [{ name: 'Madam Nevra', color: '#7a3a6a', cap: '#f0e0ff', mustache: false, sleepDepth: 0.85 }],
+        residents: [{ name: 'Koleksiyoncu', color: '#7a3a6a', cap: '#f0e0ff', mustache: false, sleepDepth: 0.85 }],
         dog: false,
         items: 1280,
         target: 180000,
@@ -229,14 +231,13 @@
         id: 7,
         name: 'Yıldız Futbolcunun Malikânesi',
         short: 'Havuzlu Malikâne + Köpek',
-        desc: 'Süper Lig\'in yıldız golcüsü Kaan\'ın malikânesi. Havuz, oyun odası, kupa dolapları... ve bahçede bekçi köpeği Duman.',
+        desc: 'Süper Lig\'in yıldız golcüsünün malikânesi. Havuz, oyun odası, kupa dolapları... ve bahçede bir bekçi köpeği.',
         floors: 3,
         basement: true,
         width: 3400,
         garden: 1800,
-        residents: [{ name: 'Kaan', color: '#2a8a4a', cap: '#ffffff', mustache: false, sleepDepth: 0.8 }],
+        residents: [{ name: 'Golcü', color: '#2a8a4a', cap: '#ffffff', mustache: false, sleepDepth: 0.8 }],
         dog: true,
-        dogName: 'Duman',
         items: 1600,
         target: 240000,
         stars: [240000, 440000, 700000],
@@ -263,8 +264,8 @@
         width: 3600,
         garden: 1300,
         residents: [
-          { name: 'Vekil Bey', color: '#5a4a3a', cap: '#e8e0c8', mustache: true, sleepDepth: 0.85 },
-          { name: 'Vekil Hanım', color: '#8a5a7a', cap: '#ffe0f0', mustache: false, sleepDepth: 0.85 },
+          { name: 'Milletvekili', color: '#5a4a3a', cap: '#e8e0c8', mustache: true, sleepDepth: 0.85 },
+          { name: 'Vekilin Eşi', color: '#8a5a7a', cap: '#ffe0f0', mustache: false, sleepDepth: 0.85 },
         ],
         dog: false,
         items: 1840,
@@ -293,8 +294,8 @@
         width: 3500,
         garden: 900,
         residents: [
-          { name: 'Boris Bey', color: '#3a3a4a', cap: '#c0c4cc', mustache: true, sleepDepth: 0.8 },
-          { name: 'Katya Hanım', color: '#8a2a4a', cap: '#ffe8f0', mustache: false, sleepDepth: 0.8 },
+          { name: 'Oligark', color: '#3a3a4a', cap: '#c0c4cc', mustache: true, sleepDepth: 0.8 },
+          { name: 'Oligarkın Eşi', color: '#8a2a4a', cap: '#ffe8f0', mustache: false, sleepDepth: 0.8 },
         ],
         dog: false,
         items: 2080,
@@ -317,17 +318,16 @@
         id: 10,
         name: 'Paşa Konağı',
         short: 'Dev Bahçeli Konak · Final',
-        desc: 'Devasa bir bahçe, havuz, kulübe, bekçi köpeği Karabaş, iki bekçi, hazine odası ve şehrin en gelişmiş güvenlik sistemi. Büyük final!',
+        desc: 'Devasa bir bahçe, havuz, kulübe, bir bekçi köpeği, iki bekçi, hazine odası ve şehrin en gelişmiş güvenlik sistemi. Büyük final!',
         floors: 3,
         basement: true,
         width: 4800,
         garden: 3200,
         residents: [
-          { name: 'Paşa Bey', color: '#8a2d2d', cap: '#ffffff', mustache: true, sleepDepth: 0.85 },
-          { name: 'Hanımefendi', color: '#2d6a8a', cap: '#ffd1e0', mustache: false, sleepDepth: 0.8 },
+          { name: 'Emekli Paşa', color: '#8a2d2d', cap: '#ffffff', mustache: true, sleepDepth: 0.85 },
+          { name: 'Paşanın Eşi', color: '#2d6a8a', cap: '#ffd1e0', mustache: false, sleepDepth: 0.8 },
         ],
         dog: true,
-        dogName: 'Karabaş',
         items: 2720,
         target: 550000,
         stars: [550000, 1000000, 1600000],
@@ -357,7 +357,7 @@
         garden: 320,
         urban: true,
         roomPlan: { '-1': ['vault', 'storage'], 0: ['showroom', 'showroom', 'office'], 1: ['workshop', 'security', 'office'] },
-        residents: [{ name: 'Gece Bekçisi Sadık', color: '#2a3a6a', cap: '#1b2a55', hat: 'police', mustache: true, sleepDepth: 0.85, bedType: 'cot' }],
+        residents: [{ name: 'Gece Bekçisi', color: '#2a3a6a', cap: '#1b2a55', hat: 'police', mustache: true, sleepDepth: 0.85, bedType: 'cot' }],
         dog: false,
         items: 1120,
         target: 650000,
@@ -388,7 +388,7 @@
         garden: 700,
         urban: true,
         roomPlan: { 0: ['lobby', 'exhibit', 'exhibit', 'exhibit', 'office'], 1: ['exhibit', 'gallery', 'exhibit', 'security'], 2: ['treasure', 'exhibit', 'gallery', 'office'] },
-        residents: [{ name: 'Gece Bekçisi Nazım', color: '#3a4a3a', cap: '#1b2a55', hat: 'police', mustache: false, sleepDepth: 0.8, bedType: 'cot' }],
+        residents: [{ name: 'Gece Bekçisi', color: '#3a4a3a', cap: '#1b2a55', hat: 'police', mustache: false, sleepDepth: 0.8, bedType: 'cot' }],
         dog: false,
         items: 1280,
         target: 800000,
@@ -419,7 +419,7 @@
         garden: 360,
         urban: true,
         roomPlan: { '-1': ['storage', 'storage', 'workshop'], 0: ['techshow', 'techshow', 'techshow', 'cashier'], 1: ['techshow', 'office', 'security', 'office'] },
-        residents: [{ name: 'Gece Bekçisi Tayfun', color: '#4a2a2a', cap: '#1b2a55', hat: 'police', mustache: true, sleepDepth: 0.8, bedType: 'cot' }],
+        residents: [{ name: 'Gece Bekçisi', color: '#4a2a2a', cap: '#1b2a55', hat: 'police', mustache: true, sleepDepth: 0.8, bedType: 'cot' }],
         dog: false,
         items: 1360,
         target: 900000,
@@ -451,7 +451,7 @@
         urban: true,
         planning: true,
         roomPlan: { '-1': ['vault', 'vault', 'storage'], 0: ['lobby', 'cashier', 'office', 'office'], 1: ['office', 'security', 'office', 'office'] },
-        residents: [{ name: 'Gece Bekçisi Remzi', color: '#2a3a6a', cap: '#1b2a55', hat: 'police', mustache: true, sleepDepth: 0.75, bedType: 'cot' }],
+        residents: [{ name: 'Gece Bekçisi', color: '#2a3a6a', cap: '#1b2a55', hat: 'police', mustache: true, sleepDepth: 0.75, bedType: 'cot' }],
         dog: false,
         items: 1360,
         target: 1300000,
@@ -485,8 +485,8 @@
         final: true,
         roomPlan: { '-1': ['vault', 'vault', 'vault', 'storage'], 0: ['lobby', 'cashier', 'cashier', 'office', 'lobby'], 1: ['office', 'security', 'office', 'office', 'office'], 2: ['treasure', 'office', 'security', 'office'] },
         residents: [
-          { name: 'Gece Bekçisi Kemal', color: '#2a3a6a', cap: '#1b2a55', hat: 'police', mustache: true, sleepDepth: 0.7, bedType: 'cot' },
-          { name: 'Gece Bekçisi Oya', color: '#5a2a4a', cap: '#1b2a55', hat: 'police', mustache: false, sleepDepth: 0.7, bedType: 'cot' },
+          { name: 'Kıdemli Bekçi', color: '#2a3a6a', cap: '#1b2a55', hat: 'police', mustache: true, sleepDepth: 0.7, bedType: 'cot' },
+          { name: 'Gece Bekçisi', color: '#5a2a4a', cap: '#1b2a55', hat: 'police', mustache: false, sleepDepth: 0.7, bedType: 'cot' },
         ],
         dog: false,
         items: 1920,
@@ -520,7 +520,7 @@
       { id: 'emp', key: '5', name: 'EMP Cihazı', desc: 'Alarm sistemini, kameraları ve lazerleri tamamen devre dışı bırakır.', price: 70000, pack: 1, icon: 'bolt' },
       { id: 'nightvision', perm: true, name: 'Gece Görüş Gözlüğü', desc: 'Kalıcı. El feneri olmadan da karanlıkta çok daha geniş görürsün.', price: 90000, icon: 'eye' },
       { id: 'thermal', perm: true, name: 'Termal Tarayıcı', desc: 'Kalıcı. Duvarların ardındaki herkesi ve kasa anahtarını haritada gösterir.', price: 120000, icon: 'map' },
-      { id: 'bribe', perm: true, name: 'Şoföre Rüşvet', desc: 'Kalıcı. Şoför Cemil her soygunda 45 saniye fazla bekler.', price: 75000, icon: 'truck' },
+      { id: 'bribe', perm: true, name: 'Şoföre Rüşvet', desc: 'Kalıcı. Şoför her soygunda 45 saniye fazla bekler.', price: 75000, icon: 'truck' },
     ],
 
     /* ------------------------------------------------------------------
@@ -613,33 +613,33 @@
 
     /* ------------------------------------------------------------------
      * SENARYO: Köprü altındaki brifingler
-     * who: 'boss' (Reis), 'hero' (Topaç)
+     * who: 'boss' (Reis), 'hero' (Red Crime)
      * ---------------------------------------------------------------- */
     BRIEFINGS: [
       [
-        { who: 'boss', mood: 'grin', text: 'Ooo, Topaç! Gel bakalım evlat. Soğuk mu? Şu varilin başına geç, ısın biraz.' },
+        { who: 'boss', mood: 'grin', text: 'Ooo, Red Crime! Gel bakalım evlat. Soğuk mu? Şu varilin başına geç, ısın biraz.' },
         { who: 'hero', mood: 'normal', text: 'Reis... Aradığını duydum. İş varmış.' },
-        { who: 'boss', mood: 'serious', text: 'İş var, hem de senin ilk işin. Mahallenin ucunda emekli bir öğretmen yaşıyor: Nuri Hoca.' },
+        { who: 'boss', mood: 'serious', text: 'İş var, hem de senin ilk işin. Mahallenin ucunda emekli bir öğretmen yaşıyor. İsim yok, sadece hedef: Emekli Öğretmen.' },
         { who: 'boss', mood: 'normal', text: 'Adam her gece dokuzda yatar. Yatak odası üst katta, kapısını kapatıp öyle uyur. Horultusunu sokaktan duyarsın.' },
         { who: 'hero', mood: 'normal', text: 'Evde ne var ki? Bir öğretmenden ne çıkar?' },
         { who: 'boss', mood: 'grin', text: 'Kırk yıl biriktirmiş evlat. Karısından kalma bilezikler, eski sikkeler, duvarda tablolar...' },
         { who: 'boss', mood: 'serious', text: 'Bir de küçük bir kasası varmış. Anahtarını evde bir yerde saklıyor, bankaya güvenmez.' },
         { who: 'hero', mood: 'worried', text: 'Ya uyanırsa?' },
         { who: 'boss', mood: 'angry', text: 'Uyanırsa ışıkları yakar, bütün evi oda oda arar, polisi arar. O yüzden uyanmayacak.' },
-        { who: 'boss', mood: 'normal', text: 'Kamyonu kapının önüne çektirdim. Şoför Cemil beş dakika bekler, sonra gazlar. Kimseyi beklemez.' },
+        { who: 'boss', mood: 'normal', text: 'Kamyonu kapının önüne çektirdim. Şoför süre dolana kadar bekler, sonra gazlar. Kimseyi beklemez.' },
         { who: 'hero', mood: 'happy', text: 'Beş dakika yeter. Sessiz, hızlı, temiz.' },
         { who: 'boss', mood: 'grin', text: 'İşte benim çocuğum! Hadi bakalım, yolun açık olsun.' },
       ],
       [
-        { who: 'boss', mood: 'grin', text: 'Nuri Hoca hâlâ bileziklerini arıyormuş, hah! İyi iş çıkardın Topaç.' },
-        { who: 'boss', mood: 'serious', text: 'Sıradaki: Kasap Rıza. Dükkânın hasılatını her akşam eve götürüyor, bankaya uğramıyor.' },
+        { who: 'boss', mood: 'grin', text: 'Emekli Öğretmen hâlâ bileziklerini arıyormuş, hah! İyi iş çıkardın Red Crime.' },
+        { who: 'boss', mood: 'serious', text: 'Sıradaki: Kasap. Dükkânın hasılatını her akşam eve götürüyor, bankaya uğramıyor.' },
         { who: 'hero', mood: 'normal', text: 'Evi nasıl bir yer?' },
-        { who: 'boss', mood: 'normal', text: 'İki katlı eski bir ev. Rıza yatak odasının kapısını kilitler. Al şu maymuncuğu, kilit senin işin artık.' },
+        { who: 'boss', mood: 'normal', text: 'İki katlı eski bir ev. Kasap yatak odasının kapısını kilitler. Al şu matkabı ve maymuncuğu, kilit senin işin artık.' },
         { who: 'boss', mood: 'grin', text: 'Bu gece yağmur da yağıyor. Çatıdaki tıkırtıda seni kimse duymaz... pek.' },
         { who: 'hero', mood: 'happy', text: 'Yağmurlu gece, dolu kasa. Gidiyorum Reis.' },
       ],
       [
-        { who: 'boss', mood: 'serious', text: 'Bu seferki farklı. Doktor Selin. Yıllarca nöbet tutmuş, kuş uykusu uyur.' },
+        { who: 'boss', mood: 'serious', text: 'Bu seferki farklı. Doktor. Yıllarca nöbet tutmuş, kuş uykusu uyur.' },
         { who: 'boss', mood: 'normal', text: 'Dubleks bir ev, altında da bodrum var. Bodruma salondaki kapaktan el merdiveniyle iniliyor.' },
         { who: 'hero', mood: 'normal', text: 'Bodrumda ne var?' },
         { who: 'boss', mood: 'grin', text: 'Şarap mahzeni, alet edevat... Söylentiye göre pahalı tıbbi cihazlar da orada. Kapıların çoğu kilitli, maymuncuğunu hazır tut.' },
@@ -647,7 +647,7 @@
         { who: 'hero', mood: 'happy', text: 'Bir de sis var... Tam bizim hava.' },
       ],
       [
-        { who: 'boss', mood: 'serious', text: 'Kuyumcu Zeki. Kapalıçarşı\'nın en zengin adamı. Dükkânı değil, evini soyacağız.' },
+        { who: 'boss', mood: 'serious', text: 'Kuyumcu. Kapalıçarşı\'nın en zengin adamı. Dükkânı değil, evini soyacağız.' },
         { who: 'hero', mood: 'normal', text: 'Kuyumcunun evi... Kolay olmaz bu.' },
         { who: 'boss', mood: 'normal', text: 'Olmaz tabii. Adam geçen ay kamera taktırmış. Kameralar döner durur, önüne çıkarsan alarm öter.' },
         { who: 'boss', mood: 'grin', text: 'Ama kapının yanında bir alarm paneli var. Kablolarını çözersen bütün sistem susar.' },
@@ -656,27 +656,27 @@
         { who: 'boss', mood: 'grin', text: 'Bu arada, kazandığın parayla internetin karanlık köşelerinden güzel oyuncaklar alabilirsin. Benden duymadın.' },
       ],
       [
-        { who: 'boss', mood: 'grin', text: 'Büyük balık zamanı Topaç. Holding patronu Hakan Bey ve eşi Leyla Hanım.' },
+        { who: 'boss', mood: 'grin', text: 'Büyük balık zamanı Red Crime. Holding Patronu ve eşi.' },
         { who: 'boss', mood: 'serious', text: 'Dört katlı bir rezidans. Kavgalılarmış, ayrı katlarda, kilitli odalarda yatıyorlar. Biri kalkarsa öteki de kalkar.' },
         { who: 'hero', mood: 'worried', text: 'Dört kat... Aşağı taşıması uzun sürer.' },
         { who: 'boss', mood: 'normal', text: 'O yüzden gözün değerli olanda olsun. Saat, mücevher, nakit. Koltuk takımıyla uğraşma.' },
         { who: 'boss', mood: 'angry', text: 'Kameralar var, bir de koridorlardan birinde lazer ışınları. Kırmızı çizgiye değme, zıpla ya da eğil.' },
-        { who: 'boss', mood: 'grin', text: 'Hakan Bey\'in kasası bu şehrin yarısından zengin diyorlar. Anahtarı evde bir yerde olmalı.' },
+        { who: 'boss', mood: 'grin', text: 'Patronun kasası bu şehrin yarısından zengin diyorlar. Anahtarı evde bir yerde olmalı.' },
       ],
       [
-        { who: 'boss', mood: 'serious', text: 'Madam Nevra. Sanat koleksiyoncusu. Villası küçük bir müze gibi.' },
+        { who: 'boss', mood: 'serious', text: 'Koleksiyoncu. Adını bilmene gerek yok. Villası küçük bir müze gibi.' },
         { who: 'hero', mood: 'normal', text: 'Tablo mu çalacağız? Onları kim alır?' },
         { who: 'boss', mood: 'grin', text: 'Alan çok evlat, alan çok. Bir tanesi bizim köprüyü on kere satın alır.' },
         { who: 'boss', mood: 'normal', text: 'Lazerler bu evde yanıp sönüyor. Söndüğü anı kolla, geç. Kameralar her galeride.' },
-        { who: 'boss', mood: 'serious', text: 'Madam uykusunda bile koleksiyonunu düşünür. Bir tablo yere düşerse fırlar yataktan.' },
+        { who: 'boss', mood: 'serious', text: 'Koleksiyoncu uykusunda bile koleksiyonunu düşünür. Bir tablo yere düşerse fırlar yataktan.' },
         { who: 'hero', mood: 'happy', text: 'Eldivenlerimi giydim bile.' },
       ],
       [
-        { who: 'boss', mood: 'grin', text: 'Golcü Kaan! Geçen hafta üç gol attı, bu hafta biz atacağız.' },
-        { who: 'boss', mood: 'serious', text: 'Malikânenin koca bir bahçesi, havuzu var. Bahçede de Duman diye bir köpek dolaşıyor.' },
+        { who: 'boss', mood: 'grin', text: 'Golcü! Geçen hafta üç gol attı, bu hafta biz atacağız.' },
+        { who: 'boss', mood: 'serious', text: 'Malikânenin koca bir bahçesi, havuzu var. Bahçede de bir bekçi köpeği dolaşıyor.' },
         { who: 'hero', mood: 'worried', text: 'Köpek... Havlarsa ne olacak?' },
         { who: 'boss', mood: 'angry', text: 'Havlarsa ev uyanır. Isırırsa elindekini düşürürsün. Çalıların arkasından git, havuzdan uzak dur.' },
-        { who: 'boss', mood: 'normal', text: 'İçeride kupa dolapları, imzalı formalar, oyun konsolları... Kaan eşyalarına çok düşkün, kasası da bodrumda.' },
+        { who: 'boss', mood: 'normal', text: 'İçeride kupa dolapları, imzalı formalar, oyun konsolları... Golcü eşyalarına çok düşkün, kasası da bodrumda.' },
         { who: 'hero', mood: 'happy', text: 'Hazırım Reis. Top ayağımda.' },
       ],
       [
@@ -688,28 +688,28 @@
         { who: 'hero', mood: 'happy', text: 'Gölge gibi girip çıkacağım.' },
       ],
       [
-        { who: 'boss', mood: 'serious', text: 'Bu iş... büyük iş. Yurt dışından gelen bir milyarder, Boris. Şehrin tepesindeki köşkte oturuyor.' },
+        { who: 'boss', mood: 'serious', text: 'Bu iş... büyük iş. Yurt dışından gelen bir milyarder: Oligark. Şehrin tepesindeki köşkte oturuyor.' },
         { who: 'boss', mood: 'angry', text: 'İki güvenlikçi, her köşede kamera, yanıp sönen lazerler. Kasası da bodrumdaki hazine odasında.' },
         { who: 'hero', mood: 'worried', text: 'Reis, bu intihar gibi...' },
         { who: 'boss', mood: 'normal', text: 'Değil. Alarm panelini hallet, güvenlikçilerin rotasını öğren, kilitleri sessizce aç. Adım adım.' },
-        { who: 'boss', mood: 'grin', text: 'Bu işten sonra adın efsane olur Topaç. Ya da hapiste yatarsın. İkisi de şöhret.' },
+        { who: 'boss', mood: 'grin', text: 'Bu işten sonra adın efsane olur Red Crime. Ya da hapiste yatarsın. İkisi de şöhret.' },
         { who: 'hero', mood: 'happy', text: 'Efsane olanı seçiyorum.' },
       ],
       [
         { who: 'boss', mood: 'serious', text: 'Ve... büyük final. Paşa Konağı.' },
         { who: 'boss', mood: 'serious', text: 'Koca bir bahçe, havuz, bahçe kulübesi. Üç kat artı bodrum. Bodrumda da hazine odası.' },
         { who: 'hero', mood: 'worried', text: 'Bahçede bir şey havlıyor gibi...' },
-        { who: 'boss', mood: 'angry', text: 'Karabaş! Konağın bekçi köpeği. Bir de iki bekçi, onlarca kamera ve şehrin en iyi alarm sistemi.' },
-        { who: 'boss', mood: 'normal', text: 'Paşa Bey ve hanımı üst katlarda, kilitli odalarda yatıyor. Hizmetçiler bu gece izinli.' },
+        { who: 'boss', mood: 'angry', text: 'Konağın bir bekçi köpeği var. Bir de iki bekçi, onlarca kamera ve şehrin en iyi alarm sistemi.' },
+        { who: 'boss', mood: 'normal', text: 'Emekli Paşa ve eşi üst katlarda, kilitli odalarda yatıyor. Hizmetçiler bu gece izinli.' },
         { who: 'boss', mood: 'grin', text: 'Bu işi de bitirirsen köprü altından yalıya taşınıyoruz evlat. Son kez: sessiz, hızlı, temiz!' },
         { who: 'hero', mood: 'happy', text: 'Sessiz, hızlı, temiz!' },
       ],
       [
-        { who: 'boss', mood: 'grin', text: 'Evlerle işimiz bitti Topaç. Artık dükkân soyuyoruz. İlk durak: Altın Sarayı Kuyumcusu.' },
+        { who: 'boss', mood: 'grin', text: 'Evlerle işimiz bitti Red Crime. Artık dükkân soyuyoruz. İlk durak: Altın Sarayı Kuyumcusu.' },
         { who: 'hero', mood: 'normal', text: 'Kuyumcu mu? Oralar kale gibidir Reis.' },
         { who: 'boss', mood: 'serious', text: 'Kale değil ama yakın. Vitrinlerin önünde hareket sensörleri var: ayakta yürürsen öterler. Eğilerek geç.' },
         { who: 'boss', mood: 'normal', text: 'Bir de yere gömülü basınç plakaları. Parlak metal bir şey görürsen üstünden atla.' },
-        { who: 'boss', mood: 'grin', text: 'Gece bekçisi Sadık, güvenlik odasında horul horul uyur. Kiralık kasalar bodrumda, çekmece çekmece altın.' },
+        { who: 'boss', mood: 'grin', text: 'Gece bekçisi güvenlik odasında horul horul uyur. Kiralık kasalar bodrumda, çekmece çekmece altın.' },
         { who: 'hero', mood: 'happy', text: 'Eğilerek, atlayarak, sessizce. Anlaşıldı.' },
       ],
       [
@@ -728,20 +728,20 @@
         { who: 'hero', mood: 'happy', text: 'Bu gece herkese bedava alışveriş.' },
       ],
       [
-        { who: 'boss', mood: 'serious', text: 'Topaç. Artık oyun bitti. Banka soyacağız.' },
+        { who: 'boss', mood: 'serious', text: 'Red Crime. Artık oyun bitti. Banka soyacağız.' },
         { who: 'hero', mood: 'worried', text: 'Banka mı?! Reis, bu başka lig...' },
-        { who: 'boss', mood: 'normal', text: 'O yüzden yalnız gitmiyorsun. Ekibi topladım: Fare hacker, Kartal gözcü, Cemil şoför, Şimşek de dikkat dağıtıcı.' },
+        { who: 'boss', mood: 'normal', text: 'O yüzden yalnız gitmiyorsun. Ekibi topladım: bir hacker, bir gözcü, bir şoför ve bir dikkat dağıtıcı. İsim yok, sadece iş.' },
         { who: 'boss', mood: 'serious', text: 'Planı sen yapacaksın. Nereden gireceksin, kim nerede duracak, kasayı neyle açacaksın. Her seçimin bir bedeli var.' },
         { who: 'boss', mood: 'angry', text: 'Bir kere alarm çaldı mı banka kilitlenir, polis bir dakikada gelir. Yanlış hesap yapma.' },
         { who: 'hero', mood: 'normal', text: 'Planı görmek istiyorum. Her köşesini.' },
       ],
       [
-        { who: 'boss', mood: 'serious', text: 'Topaç... Otur şuraya. Sana hiç anlatmadım, neden köprü altında yaşadığımı.' },
-        { who: 'boss', mood: 'serious', text: 'Yıllar önce Kara Kemal\'e borçlandım. Ödeyemedim. Her şeyimi aldı. Şimdi de süre verdi: bu hafta.' },
+        { who: 'boss', mood: 'serious', text: 'Red Crime... Otur şuraya. Sana hiç anlatmadım, neden köprü altında yaşadığımı.' },
+        { who: 'boss', mood: 'serious', text: 'Yıllar önce Tefeci\'ye borçlandım. Ödeyemedim. Her şeyimi aldı. Şimdi de süre verdi: bu hafta.' },
         { who: 'hero', mood: 'worried', text: 'Ne kadar borç Reis?' },
         { who: 'boss', mood: 'angry', text: 'Bir bankanın kasası kadar. O yüzden Hazine Bankası. Genel müdürlük. Şehrin kalbi.' },
         { who: 'boss', mood: 'serious', text: 'Üç bekçi, onlarca kamera, tarayan lazerler, dev bir kasa. Ekip hazır, plan senin.' },
-        { who: 'boss', mood: 'angry', text: 'Ve dinle beni iyi: iki hakkın var. İkisinde de olmazsa... Kara Kemal ikimizi de bulur. Ben de onu beklemem.' },
+        { who: 'boss', mood: 'angry', text: 'Ve dinle beni iyi: iki hakkın var. İkisinde de olmazsa... Tefeci ikimizi de bulur. Ben de onu beklemem.' },
         { who: 'hero', mood: 'worried', text: 'Anlıyorum Reis. İki hak.' },
         { who: 'boss', mood: 'normal', text: 'Sen benim en iyi adamımsın evlat. Bunu hiç unutma. Şimdi git ve efsane ol.' },
       ],
@@ -754,10 +754,10 @@
      * EKİP (banka soygunları)
      * ---------------------------------------------------------------- */
     CREW: [
-      { id: 'hacker', name: 'Fare', role: 'Hacker', color: '#3ddc84', hat: 'cap', hatColor: '#1a1a1a' },
-      { id: 'lookout', name: 'Kartal', role: 'Gözcü', color: '#ffc83d', hat: 'fedora', hatColor: '#3a2a1a' },
-      { id: 'driver', name: 'Cemil', role: 'Şoför', color: '#4aa8ff', hat: 'cap', hatColor: '#2a4d8f' },
-      { id: 'decoy', name: 'Şimşek', role: 'Dikkat Dağıtıcı', color: '#ff8c2e', hat: 'none', hatColor: '#000' },
+      { id: 'hacker', name: 'Hacker', role: 'Hacker', color: '#3ddc84', hat: 'cap', hatColor: '#1a1a1a' },
+      { id: 'lookout', name: 'Gözcü', role: 'Gözcü', color: '#ffc83d', hat: 'fedora', hatColor: '#3a2a1a' },
+      { id: 'driver', name: 'Şoför', role: 'Şoför', color: '#4aa8ff', hat: 'cap', hatColor: '#2a4d8f' },
+      { id: 'decoy', name: 'Dikkat Dağıtıcı', role: 'Dikkat Dağıtıcı', color: '#ff8c2e', hat: 'none', hatColor: '#000' },
     ],
     PLAN: [
       {
@@ -772,7 +772,7 @@
       },
       {
         id: 'hacker',
-        title: 'Hacker: Fare',
+        title: 'Hacker',
         crew: 'hacker',
         options: [
           { id: 'cams', name: 'Kameraları kör et', desc: 'İlk 90 saniye boyunca tüm kameralar kapalı.' },
@@ -782,7 +782,7 @@
       },
       {
         id: 'lookout',
-        title: 'Gözcü: Kartal',
+        title: 'Gözcü',
         crew: 'lookout',
         options: [
           { id: 'roof', name: 'Karşı çatıda', desc: 'Bekçileri haritada gösterir, yaklaşınca telsizle uyarır.' },
@@ -791,7 +791,7 @@
       },
       {
         id: 'driver',
-        title: 'Şoför: Cemil',
+        title: 'Şoför',
         crew: 'driver',
         options: [
           { id: 'front', name: 'Ön cadde', desc: 'Kamyon ana girişin önünde bekler.' },
@@ -800,11 +800,11 @@
       },
       {
         id: 'decoy',
-        title: 'Dikkat Dağıtıcı: Şimşek',
+        title: 'Dikkat Dağıtıcı',
         crew: 'decoy',
         options: [
           { id: 'call', name: 'Sahte ihbar', desc: 'Bekçiler ilk 45 saniye binanın önüne çıkar.' },
-          { id: 'none', name: 'Yedekte bekle', desc: 'Şimşek arabada bekler. Soygun sonunda +%10 ganimet bonusu.' },
+          { id: 'none', name: 'Yedekte bekle', desc: 'Dikkat Dağıtıcı arabada bekler. Soygun sonunda +%10 ganimet bonusu.' },
         ],
       },
       {
@@ -852,6 +852,21 @@
       'Ağır eşyalar seni yavaşlatır ve daha sesli yürürsün.',
       'M tuşu ile evin haritasını açabilirsin.',
     ],
+  };
+
+  /**
+   * Bölümün soygun süresi (saniye, zorluk çarpanı hariç). İlk üç bölüm sabit;
+   * sonrakiler 10 dk'dan son bölümde 15 dk'ya doğrusal çıkar (30 sn'ye yuvarlı).
+   */
+  Config.heistTime = (levelIndex) => {
+    const fixed = Config.HEIST_TIMES;
+    if (levelIndex < fixed.length) return fixed[Math.max(0, levelIndex)];
+    const first = fixed.length;
+    const last = Config.LEVELS.length - 1;
+    const k = last > first ? (levelIndex - first + 1) / (last - first + 1) : 1;
+    const base = fixed[fixed.length - 1];
+    const sec = base + (Config.HEIST_TIME_MAX - base) * Math.min(1, k);
+    return Math.round(sec / 30) * 30;
   };
 
   RC.Config = Config;

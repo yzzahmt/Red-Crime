@@ -1,7 +1,7 @@
 /* =========================================================================
  *  RED CRIME - Köprü altı brifingi
  *  Oyuncu köprü altında yürür; ateş varilinin başındaki Reis soygun planını
- *  anlatır, ardından kamyon gelir ve Topaç kamyona biner.
+ *  anlatır, ardından kamyon gelir ve Red Crime kamyona biner.
  * ========================================================================= */
 (function (RC) {
   'use strict';
@@ -26,7 +26,7 @@
       this.lines.push({ who: 'boss', mood: 'serious', text: RC.L(C.TARGET_LINE, { v: RC.U.formatMoney(this.cfg.target) }) });
       if (this.cfg.final) {
         const left = C.FINAL_ATTEMPTS - (RC.Save.progress.finalAttempts || 0);
-        this.lines.push({ who: 'boss', mood: 'angry', text: RC.L(left <= 1 ? 'Bu SON hakkın Topaç. Son. Anladın mı?' : 'Unutma: {n} hakkın var. Sonra benim sıram.', { n: left }) });
+        this.lines.push({ who: 'boss', mood: 'angry', text: RC.L(left <= 1 ? 'Bu SON hakkın Red Crime. Son. Anladın mı?' : 'Unutma: {n} hakkın var. Sonra benim sıram.', { n: left }) });
       }
       this.t = 0;
       this.camera = new RC.Camera();

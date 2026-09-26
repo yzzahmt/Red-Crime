@@ -22,6 +22,8 @@
     frames: 0,
     fpsT: 0,
     last: 0,
+    timers: [],
+    renderErrors: 0,
 
     init() {
       this.canvas = document.getElementById('game');
@@ -91,12 +93,75 @@
         console.error('Sahne yok:', name);
         return;
       }
-      if (this.current && this.current.exit && !this.fade.keep) this.current.exit();
+      const prev = this.current;
+      if (prev && !this.fade.keep) {
+        // Eski sahnenin zamanlayıcıları ve kaynakları: yeni sahne girmeden önce temizlenir
+        this.clearTimers(prev);
+        if (prev.exit) {
+          try {
+            prev.exit();
+          } catch (e) {
+            console.error('Sahne çıkışı başarısız:', this.currentName, e);
+          }
+        }
+      }
       this.fade.keep = false;
       this.current = sc;
       this.currentName = name;
       RC.Input.consumeAll();
-      sc.enter(params || {});
+      try {
+        sc.enter(params || {});
+      } catch (e) {
+        // Yarım kurulmuş bir sahne her karede hata fırlatır; menüye güvenli dönüş
+        console.error('Sahne girişi başarısız:', name, e);
+        this.clearTimers(sc);
+        if (sc.exit) {
+          try {
+            sc.exit();
+          } catch (e2) {
+            /* zaten bozuk */
+          }
+        }
+        if (name !== 'menu' && RC.Scenes.menu) this.switchTo('menu', {});
+      }
+    },
+
+    /**
+     * Sahneye bağlı zamanlayıcı (setTimeout yerine). owner=null: sahneden bağımsız.
+     * Oyun zamanıyla ilerler, sahne duraklatılınca bekler ve sahneden
+     * çıkılınca iptal edilir; böylece geri çağrım yok edilmiş dünyaya dokunamaz.
+     */
+    later(sec, fn, owner = this.current) {
+      const tm = { t: sec, fn, owner };
+      this.timers.push(tm);
+      return tm;
+    },
+
+    clearTimers(owner) {
+      if (!owner) this.timers.length = 0;
+      else this.timers = this.timers.filter((tm) => tm.owner !== owner);
+    },
+
+    tickTimers(dt) {
+      const sc = this.current;
+      if (!this.timers.length) return;
+      const paused = sc && sc.state === 'paused';
+      const due = [];
+      for (const tm of this.timers) {
+        // owner === null: sahneden bağımsız (ör. geçiş hızı), her zaman işler
+        if (tm.owner !== null && (tm.owner !== sc || paused)) continue;
+        tm.t -= dt;
+        if (tm.t <= 0) due.push(tm);
+      }
+      if (!due.length) return;
+      this.timers = this.timers.filter((tm) => !due.includes(tm));
+      for (const tm of due) {
+        try {
+          tm.fn();
+        } catch (e) {
+          console.error(e);
+        }
+      }
     },
 
     loop(ts) {
@@ -132,7 +197,10 @@
       }
 
       try {
-        if (this.current && !(f.dir > 0 && f.a > 0.98)) this.current.update(dt);
+        if (this.current && !(f.dir > 0 && f.a > 0.98)) {
+          this.current.update(dt);
+          this.tickTimers(dt);
+        }
       } catch (e) {
         console.error(e);
       }
@@ -145,7 +213,10 @@
       try {
         if (this.current) this.current.render(ctx);
       } catch (e) {
-        console.error(e);
+        // Yarıda kalan çizim save() yığınını dengesiz bırakır: bağlamı sıfırla
+        if (this.renderErrors++ < 5) console.error(e);
+        if (ctx.reset) ctx.reset();
+        else this.canvas.width = this.canvas.width;
       }
       ctx.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, 0, 0);
       if (f.a > 0) {
