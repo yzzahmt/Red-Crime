@@ -349,6 +349,11 @@ window.RC = window.RC || {};
     if (n >= 1e4) return U.CURRENCY + Math.round(n / 1e3) + 'K';
     return U.formatMoney(n);
   };
+  /**
+   * Yumuşak tavan: tavana kadar değer aynen kalır, üstünde logaritmik büyür.
+   * Nadir eşyalar değerli kalır ama tek başına bölüm hedefini karşılayamaz.
+   */
+  U.softCap = (v, cap, k = 0.35) => (v <= cap ? v : cap * (1 + k * Math.log(v / cap)));
   U.formatTime = (sec) => {
     sec = Math.max(0, Math.ceil(sec));
     const m = Math.floor(sec / 60);

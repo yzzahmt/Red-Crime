@@ -50,8 +50,8 @@
       this.residents = W.bedSpots.map((bs, i) => new RC.Resident(this, bs.resident, bs, i));
       // Bekçiler
       const GUARDS = [
-        { name: 'Özel Güvenlik', color: '#2a3a6a', cap: '#1b2a55', mustache: true, sleepDepth: 1 },
-        { name: 'Vardiya Amiri', color: '#3a4a3a', cap: '#1b2a55', mustache: false, sleepDepth: 1 },
+        { name: 'Özel Güvenlik', color: '#2a3a6a', cap: '#1b2a55', mustache: true, sleepDepth: 1, look: { build: 1.2, hair: 'buzz', hairColor: '#1a1410', skin: '#c9946c', beard: 'stubble' } },
+        { name: 'Vardiya Amiri', color: '#3a4a3a', cap: '#1b2a55', mustache: false, sleepDepth: 1, look: { age: 'old', build: 1.1, hair: 'gray', mustache: true, skin: '#e0b08a' } },
       ];
       (W.guardSpawns || []).forEach((gs, i) => {
         const room = W.floorByK[0].rooms[0];
@@ -461,12 +461,19 @@
       this.toast('KASA AÇILDI! İçindekileri topla!', C.COLORS.gold);
       this.particles.sparks(s.x + s.w / 2, s.y + 30, 40, '#ffd24a', 320);
       this.camera.shake(0.3);
-      const n = 5 + Math.min(this.levelIndex, 9) * 2 + (this.cfg.kind === 'bank' ? 14 : this.cfg.kind ? 6 : 0);
+      // Kasa bütçesi bölüm hedefine bağlı: bütçe dolana kadar eşya çıkar.
+      // Piyasa değerli olmayan eşyalar erken bölümlerde bütçeye göre ölçeklenir
+      // (aksi hâlde 1. bölüm kasasındaki tek deste nakit hedefi karşılıyordu).
+      const budget = this.cfg.target * C.SAFE_BUDGET;
+      const lvlMul = 1 + this.levelIndex * 0.35;
+      const scale = U.clamp((budget * 0.12) / (17000 * lvlMul), 0.03, 1);
       const rng = new U.RNG(Math.floor(Math.random() * 1e6));
       const pool = RC.Items.safeLootFor(this.levelIndex);
-      for (let i = 0; i < n; i++) {
+      let spent = 0;
+      for (let i = 0; i < 40 && spent < budget; i++) {
         const def = rng.weighted(pool, 'w8');
-        const it = new RC.Item(def, s.x + s.w / 2 - def.w / 2, s.y + 20, rng, { valueMul: 1 + this.levelIndex * 0.35, room: W.safeRoom });
+        const it = new RC.Item(def, s.x + s.w / 2 - def.w / 2, s.y + 20, rng, { valueMul: lvlMul * scale, valueCap: budget * C.SAFE_ITEM_CAP, room: W.safeRoom });
+        spent += it.value;
         it.k = s.k;
         it.release(U.rand(-180, 180), U.rand(-420, -220), true);
         W.items.push(it);
@@ -636,7 +643,7 @@
       const rng = new U.RNG(c.seed);
       const topY = f.def.wall ? f.y + f.h + 2 : f.y;
       for (const def of c.defs) {
-        const it = new RC.Item(def, U.clamp(f.x + rng.float(4, f.w - def.w - 4), f.x, f.x + f.w - def.w), topY - def.h - 2, rng, { valueMul: 1 + this.levelIndex * 0.18, room: f.room });
+        const it = new RC.Item(def, U.clamp(f.x + rng.float(4, f.w - def.w - 4), f.x, f.x + f.w - def.w), topY - def.h - 2, rng, { valueMul: 1 + this.levelIndex * 0.18, valueCap: W.valueCap, room: f.room });
         it.k = f.k;
         it.fromContainer = true;
         it.release(rng.float(-60, 60), rng.float(-260, -120), true);

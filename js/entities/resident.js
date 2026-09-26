@@ -757,172 +757,140 @@
         return;
       }
       const moving = !!this.seg && this.doorT <= 0;
-      const bob = moving ? Math.abs(Math.sin(this.walkPhase * 2)) * 3 : Math.sin(this.t * 2) * 1;
-      const cx = this.x;
-      const cy = this.y - R - bob;
       const f = this.facing;
       const chase = this.state === 'chase';
-      const swing = moving ? Math.sin(this.walkPhase * 2) * 10 : 0;
-
-      let arms;
-      if (this.climbing) {
-        const s = Math.sin(this.t * 8);
-        arms = [
-          { x: -12, y: -R * 1.2 + s * 6 },
-          { x: 12, y: -R * 1.2 - s * 6 },
-        ];
-      } else if (this.state === 'calling') {
-        arms = f > 0 ? [{ x: -R * 1.0, y: R * 0.5 }, { x: R * 0.55, y: -R * 0.55 }] : [{ x: -R * 0.55, y: -R * 0.55 }, { x: R * 1.0, y: R * 0.5 }];
-      } else if (this.state === 'flee') {
-        arms = [
-          { x: -R * 0.9, y: -R * 1.4 },
-          { x: R * 0.9, y: -R * 1.4 },
-        ];
-      } else if (this.doorT > 0) {
-        arms = f > 0 ? [{ x: -R * 1.0, y: R * 0.6 }, { x: R * 1.5, y: -R * 0.1 }] : [{ x: -R * 1.5, y: -R * 0.1 }, { x: R * 1.0, y: R * 0.6 }];
-      } else if (this.isGuard) {
-        // Fener öne doğru
-        arms = f > 0 ? [{ x: -R * 1.05 - swing * 0.2, y: R * 0.6 }, { x: R * 1.45, y: R * 0.05 }] : [{ x: -R * 1.45, y: R * 0.05 }, { x: R * 1.05 + swing * 0.2, y: R * 0.6 }];
-      } else if (chase) {
-        arms = f > 0 ? [{ x: -R * 1.1, y: R * 0.3 + swing * 0.3 }, { x: R * 0.9, y: -R * 0.9 }] : [{ x: -R * 0.9, y: -R * 0.9 }, { x: R * 1.1, y: R * 0.3 + swing * 0.3 }];
-      } else if (this.state === 'search' || this.state === 'sweep') {
-        arms = [
-          { x: -R * 0.95, y: R * 0.2 },
-          { x: R * 0.95, y: R * 0.2 },
-        ];
-      } else {
-        arms = [
-          { x: -R * 1.05 - swing * 0.3 * f, y: R * 0.65 },
-          { x: R * 1.05 + swing * 0.3 * f, y: R * 0.65 },
-        ];
-      }
-
-      if (chase && !this.isGuard) {
-        const hx = cx + (f > 0 ? arms[1].x : arms[0].x);
-        const hy = cy + (f > 0 ? arms[1].y : arms[0].y);
-        ctx.save();
-        ctx.translate(hx, hy);
-        ctx.rotate(f > 0 ? -0.6 + Math.sin(this.t * 10) * 0.3 : Math.PI + 0.6 - Math.sin(this.t * 10) * 0.3);
-        ctx.fillStyle = '#b8864a';
-        ctx.beginPath();
-        ctx.moveTo(0, -3);
-        ctx.lineTo(44, -6);
-        ctx.quadraticCurveTo(50, 0, 44, 6);
-        ctx.lineTo(0, 3);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.restore();
+      const L = this.lookData();
+      const run = moving && (chase || this.state === 'flee');
+      const s = Math.sin(this.t * 8);
+      // Eller: gövdeye göre (ayak = 0,0), sağa bakış normunda
+      let hands = null;
+      if (this.climbing) hands = { front: { x: 7, y: -98 + s * 6 }, back: { x: -1, y: -98 - s * 6 } };
+      else if (this.state === 'calling') hands = { front: { x: 5, y: -82 } };
+      else if (this.state === 'flee') hands = { front: { x: 8, y: -102 }, back: { x: -4, y: -100 } };
+      else if (this.doorT > 0) hands = { front: { x: 24, y: -60 } };
+      else if (this.isGuard) hands = { front: { x: 22, y: -64 } };
+      else if (chase) hands = { front: { x: 12, y: -96 + Math.sin(this.t * 10) * 3 } };
+      else if (this.state === 'search' || this.state === 'sweep') hands = { front: { x: 14, y: -54 }, back: { x: 2, y: -50 } };
+      if (hands && !hands.back && moving) {
+        const k = Math.sin(this.walkPhase * 1.2);
+        hands.back = { x: -1 - k * 8, y: -39 };
       }
 
       const p = this.scene.player;
-      RC.Draw.character(ctx, {
-        x: cx,
-        y: cy,
-        r: R,
-        body: this.color,
-        sx: 1,
-        sy: 1,
+      const lookY = this.seesPlayer ? U.clamp((p.cy - (this.y - 80)) / 120, -1, 1) : 0;
+      const res = RC.Draw.human(ctx, {
+        x: this.x,
+        y: this.y,
         facing: f,
-        look: this.seesPlayer ? { x: Math.sign(p.cx - cx), y: U.clamp((p.cy - cy) / 100, -1, 1) } : { x: f * 0.6, y: 0 },
+        look: L,
+        pose: run ? 'run' : moving ? 'walk' : 'stand',
+        phase: this.walkPhase * 1.2,
+        hands,
         eyes: chase ? 'angry' : this.state === 'return' ? 'sleepy' : this.suspicion > 30 || this.state === 'calling' || this.state === 'flee' ? 'wide' : 'open',
         mouth: chase ? 'angry' : this.state === 'return' ? 'flat' : this.suspicion > 30 ? 'o' : this.isGuard ? 'flat' : 'frown',
-        mask: false,
-        hat: this.cfg.hat || (this.isGuard ? 'police' : 'nightcap'),
-        hatColor: this.cfg.cap,
-        mustache: this.cfg.mustache,
-        pajama: !this.isGuard && !this.cfg.hat,
-        chain: false,
-        arms,
-        sleeve: U.shade(this.color, -0.2),
-        skin: '#f0c8a0',
-        glove: this.isGuard ? '#1a1a1a' : undefined,
+        lookY,
         t,
       });
+      const hf = res.hands.front;
+
+      // Aksesuarlar: telefon, el feneri, oklava
       if (this.state === 'calling') {
-        const hx = cx + f * R * 0.55;
-        const hy = cy - R * 0.55;
-        U.fillRoundRect(ctx, hx - 4, hy - 10, 8, 16, 2, '#15161d');
-        ctx.fillStyle = Math.floor(this.t * 6) % 2 ? '#4aa8ff' : '#9fd6ff';
-        ctx.fillRect(hx - 3, hy - 8, 6, 10);
-      }
-      if (this.isGuard) {
-        // Göğüs rozeti ve telsiz
-        U.circle(ctx, cx - f * 8, cy + 6, 4, '#ffd24a');
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(cx + f * 12 - 3, cy - 4, 6, 12);
-        // El feneri
-        const hx = cx + (f > 0 ? arms[1].x : arms[0].x);
-        const hy = cy + (f > 0 ? arms[1].y : arms[0].y);
         ctx.save();
-        ctx.translate(hx, hy);
-        ctx.scale(f, 1);
-        U.fillRoundRect(ctx, -4, -4, 18, 8, 2, '#2a2d3e');
-        ctx.fillStyle = '#fff7c8';
-        ctx.fillRect(13, -4, 3, 8);
+        ctx.translate(hf.x, hf.y);
+        U.fillRoundRect(ctx, -2.5, -7, 5, 11, 1.5, '#15161d');
+        ctx.fillStyle = Math.floor(this.t * 6) % 2 ? '#4aa8ff' : '#9fd6ff';
+        ctx.fillRect(-1.8, -5.5, 3.6, 7);
         ctx.restore();
-      } else {
-        ctx.fillStyle = '#6a3a5a';
-        U.ellipse(ctx, cx - 10 + (moving ? Math.sin(this.walkPhase * 2) * 4 : 0), this.y - 3, 9, 4, 0);
-        U.ellipse(ctx, cx + 10 - (moving ? Math.sin(this.walkPhase * 2) * 4 : 0), this.y - 3, 9, 4, 0);
+      } else if (this.isGuard) {
+        ctx.save();
+        ctx.translate(hf.x, hf.y);
+        ctx.scale(f, 1);
+        U.fillRoundRect(ctx, -3, -3, 17, 6, 2, '#2a2d3e');
+        U.fillRoundRect(ctx, 12, -4, 4, 8, 1, '#3a3d4e');
+        ctx.fillStyle = '#fff7c8';
+        ctx.fillRect(15.5, -3.5, 1.5, 7);
+        ctx.restore();
+      } else if (chase) {
+        ctx.save();
+        ctx.translate(hf.x, hf.y);
+        ctx.scale(f, 1);
+        ctx.rotate(-0.9 + Math.sin(this.t * 10) * 0.35);
+        const g = ctx.createLinearGradient(0, -3, 0, 3);
+        g.addColorStop(0, '#d8a868');
+        g.addColorStop(1, '#8a5e30');
+        ctx.fillStyle = g;
+        U.fillRoundRect(ctx, -4, -2.5, 40, 5, 2.5, g);
+        ctx.fillStyle = '#6a4424';
+        U.fillRoundRect(ctx, -9, -1.8, 7, 3.6, 1.5, '#6a4424');
+        U.fillRoundRect(ctx, 35, -1.8, 7, 3.6, 1.5, '#6a4424');
+        ctx.restore();
       }
-      this._ov = { x: cx, y: cy - R };
+      this._ov = { x: this.x, y: res.headTop.y };
+    }
+
+    /** Görünüm verisi (yapılandırmadaki look + varsayılanlar), bir kez hesaplanır */
+    lookData() {
+      if (!this._look) this._look = RC.Human.lookFor(this.cfg, this.isGuard);
+      return this._look;
     }
 
     drawKnocked(ctx, t) {
-      ctx.save();
-      ctx.translate(this.x, this.y - R * 0.7);
-      ctx.rotate(this.facing * 1.3);
-      RC.Draw.character(ctx, {
-        x: 0,
-        y: 0,
-        r: R,
-        body: this.color,
+      // Yerde baygın yatar: baş bakış yönünde
+      const f = this.facing;
+      RC.Draw.human(ctx, {
+        x: this.x - f * 44,
+        y: this.y - 8,
+        rotate: f * (Math.PI / 2),
         facing: 1,
+        look: this.lookData(),
+        pose: 'lie',
+        hands: { front: { x: 10, y: -46 }, back: { x: -6, y: -46 } },
         eyes: 'closed',
         mouth: 'snore',
-        hat: this.isGuard ? 'police' : 'nightcap',
-        hatColor: this.cfg.cap,
-        mustache: this.cfg.mustache,
-        pajama: !this.isGuard,
-        arms: [{ x: -R * 1.1, y: R * 0.8 }, { x: R * 1.1, y: R * 0.8 }],
-        sleeve: U.shade(this.color, -0.2),
         shadow: false,
         t: this.t,
       });
-      ctx.restore();
-      this._ov = { x: this.x, y: this.y - R * 2 };
+      this._ov = { x: this.x + f * 36, y: this.y - 30 };
     }
 
     drawInBed(ctx, t) {
       const b = this.bed;
-      const cx = b.x + 42;
-      const cy = b.y + 20;
-      const breathe = Math.sin(this.t * 1.6) * 1.5;
       const sitting = this.state === 'waking';
-      ctx.save();
-      ctx.translate(cx, cy - (sitting ? 18 : 0));
-      ctx.rotate(sitting ? 0 : -1.25);
-      RC.Draw.character(ctx, {
-        x: 0,
-        y: breathe,
-        r: R,
-        body: this.color,
+      const L = this.lookData();
+      if (sitting) {
+        // Yatakta doğrulmuş: bacaklar yorganın altında
+        RC.Draw.human(ctx, {
+          x: b.x + 46,
+          y: b.y + b.h * 0.34 + 42,
+          facing: 1,
+          look: L,
+          pose: 'sit',
+          hands: { front: { x: 12, y: -52 }, back: { x: -6, y: -46 } },
+          eyes: 'wide',
+          mouth: 'open',
+          shadow: false,
+          t: this.t,
+        });
+        this._ov = { x: b.x + 48, y: b.y + b.h * 0.34 - 64 };
+        return;
+      }
+      // Sırtüstü uyur: baş yastıkta, gövde yorganın altında (yorgan sonra çizilir)
+      const breathe = Math.sin(this.t * 1.6) * 0.8;
+      const headY = b.y + b.h * 0.26; // baş yastıkta, gövde yorgan çizgisinin altında
+      RC.Draw.human(ctx, {
+        x: b.x + 38 + 80,
+        y: headY + breathe * 0.4,
+        rotate: -Math.PI / 2,
         facing: 1,
-        eyes: sitting ? 'wide' : 'sleep',
-        mouth: sitting ? 'open' : 'snore',
-        hat: this.cfg.hat || 'nightcap',
-        hatColor: this.cfg.cap,
-        mustache: this.cfg.mustache,
-        pajama: true,
-        noArms: true,
+        look: L,
+        pose: 'lie',
+        hands: { front: { x: 3, y: -40 }, back: { x: -1, y: -40 } },
+        eyes: 'closed',
+        mouth: this.wake > 40 ? 'frown' : 'snore',
         shadow: false,
         t: this.t,
       });
-      ctx.restore();
-      this._ov = { x: cx, y: b.y - 14 - (sitting ? 18 : 0) };
+      this._ov = { x: b.x + 42, y: b.y - 14 };
     }
 
     drawOverlay(ctx, t, x, topY) {

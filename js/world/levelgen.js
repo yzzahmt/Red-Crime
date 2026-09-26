@@ -719,9 +719,12 @@
 
     /* ------------------------ Eşyalar ------------------------ */
     const valueMul = 1 + levelIndex * 0.18;
+    const valueCap = cfg.target * C.ITEM_VALUE_CAP;
+    W.valueCap = valueCap;
     const makeItem = (def, x, bottomY, room, opts = {}) => {
       const it = new RC.Item(def, x, bottomY - def.h, rng, {
         valueMul: opts.valueMul || valueMul,
+        valueCap,
         rarityBoost: opts.rarityBoost || (room && room.type === 'treasure' ? 2.2 : 1),
         wall: opts.wall,
         room,

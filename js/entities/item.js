@@ -85,7 +85,9 @@
       }
       const base = rng ? rng.float(def.val[0], def.val[1]) : def.val[0];
       const mul = def.market ? this.appraisal : (opts.valueMul || 1) * this.rarity.mult * this.appraisal;
-      this.value = this.isKey ? 0 : Math.max(5, Math.round((base * mul) / 10) * 10);
+      let v = base * mul;
+      if (opts.valueCap) v = U.softCap(v, opts.valueCap);
+      this.value = this.isKey ? 0 : Math.max(5, Math.round(v / 10) * 10);
       this.sprite = RC.Items.getSprite(def, this.variant);
     }
 
