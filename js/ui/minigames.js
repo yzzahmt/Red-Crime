@@ -65,7 +65,10 @@
         tol: 16 + skill * 2, // hizalama toleransı (px)
         noiseT: 0,
         cool: 0,
+        shake: 0,
+        snapT: 0,
       };
+      this.chips = [];
 
       // Pimler (sıkışma sırası rastgele: gerçek kilitlerde işleme toleransı)
       const n = this.withDrill ? Math.min(6, 3 + lvl) : Math.min(4, 2 + Math.ceil(lvl / 2));
@@ -112,13 +115,16 @@
     }
 
     /* ---------------- 1. aşama: matkap ---------------- */
+    /** Kilit yüzünün merkezi (ekran px): güncelleme ve çizim aynı noktayı kullanır */
+    lockCenter() {
+      return { cx: RC.Game.W / 2 - 170, cy: RC.Game.H / 2 - 10 };
+    }
+
     updateDrill(dt) {
       const d = this.drill;
       const m = I.mouse;
-      const w = RC.Game.W;
-      const h = RC.Game.H;
-      const cx = w / 2 - 120;
-      const cy = h / 2 + 10;
+      const { cx, cy } = this.lockCenter();
+      this.updateChips(dt);
       d.cool = Math.max(0, d.cool - dt);
       const on = m.down && d.cool <= 0;
 
@@ -138,6 +144,9 @@
         d.dx += Math.cos(d.driftA) * push * dt;
         d.dy += Math.sin(d.driftA) * push * dt;
         d.spin += dt * (20 + d.pressure * 40);
+        d.shake = d.pressure;
+      } else {
+        d.shake = 0;
       }
       const dm = Math.hypot(d.dx, d.dy);
       if (dm > 90) {
@@ -151,6 +160,9 @@
       if (on) {
         const inBand = d.pressure >= DRILL_BAND[0];
         d.progress += (inBand ? d.rate : d.rate * 0.25) * d.pressure * align * align * dt;
+        // Talaş (hizadayken metal kıvrımı, ısınınca kıvılcım); hiza bozuksa uç kayar
+        const n = Math.random() < dt * 40 * d.pressure ? 1 + (align > 0.5 ? 1 : 0) : 0;
+        for (let k = 0; k < n; k++) this.spawnChip(cx + d.ox, cy + d.oy, d.heat > 0.55 || align < 0.4);
         // Matkap sesi: baskıya bağlı, gerçek zamanlı algılanma riski
         d.noiseT -= dt;
         if (d.noiseT <= 0) {
@@ -167,6 +179,8 @@
         d.pressure = 0;
         d.cool = 1.2;
         d.progress = Math.max(0, d.progress - 0.15);
+        d.snapT = 0.8; // kırık uç parçası animasyonu
+        for (let k = 0; k < 14; k++) this.spawnChip(cx + d.ox, cy + d.oy, true);
         RC.Audio.play('metal', { vol: 0.9, intensity: 1 });
         this.noise(0.4, 'drill');
         this.scene.camera.shake(0.25);
@@ -182,6 +196,41 @@
         this.stage = 'pick';
         this.say(L('Silindir delindi. Şimdi pimleri tek tek oturt.'), '#3ddc84');
         RC.Audio.play('safeGood', { vol: 0.7 });
+      }
+    }
+
+    spawnChip(x, y, spark) {
+      if (this.chips.length > 80) this.chips.shift();
+      this.chips.push({
+        x,
+        y,
+        vx: U.rand(-40, 160),
+        vy: U.rand(-160, 20),
+        life: spark ? U.rand(0.2, 0.45) : U.rand(0.6, 1.2),
+        max: 1,
+        spark,
+        rot: U.rand(0, U.TAU),
+        spin: U.rand(-12, 12),
+        size: spark ? U.rand(1, 2.2) : U.rand(2, 4),
+      });
+      const c = this.chips[this.chips.length - 1];
+      c.max = c.life;
+    }
+
+    updateChips(dt) {
+      const d = this.drill;
+      if (d.snapT > 0) d.snapT -= dt;
+      for (let i = this.chips.length - 1; i >= 0; i--) {
+        const c = this.chips[i];
+        c.life -= dt;
+        if (c.life <= 0) {
+          this.chips.splice(i, 1);
+          continue;
+        }
+        c.vy += (c.spark ? 300 : 700) * dt;
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        c.rot += c.spin * dt;
       }
     }
 
@@ -284,7 +333,7 @@
       D.text(ctx, L(stageTxt), px + 20, py + 38, { size: 13, weight: 'bold', color: '#9aa3c7' });
       if (drill) this.drawDrill(ctx, w, h, t, px, py);
       else this.drawPick(ctx, w, h, t, px, py);
-      if (this.msgT > 0) D.text(ctx, this.msg, w / 2, py + PANEL_H - 56, { size: 15, align: 'center', weight: 'bold', color: this.flashCol, alpha: Math.min(1, this.msgT * 2) });
+      if (this.msgT > 0) D.text(ctx, this.msg, w / 2, py + (drill ? PANEL_H - 42 : 70), { size: 15, align: 'center', weight: 'bold', color: this.flashCol, alpha: Math.min(1, this.msgT * 2) });
       D.text(ctx, L('Her ses kapıdan duyulur · ESC: vazgeç'), w / 2, py + PANEL_H - 20, { size: 13, align: 'center', color: '#ff8c2e' });
       if (this.flash > 0) {
         ctx.strokeStyle = U.rgba(this.flashCol, this.flash);
@@ -308,61 +357,274 @@
 
     drawDrill(ctx, w, h, t, px, py) {
       const d = this.drill;
-      const cx = w / 2 - 120;
-      const cy = h / 2 + 10;
-      // Kilit yüzü
-      const g = ctx.createRadialGradient(cx - 30, cy - 30, 10, cx, cy, 120);
-      g.addColorStop(0, '#c9a24a');
-      g.addColorStop(1, '#6a4f1e');
-      U.circle(ctx, cx, cy, 110, g);
-      U.circle(ctx, cx, cy, 70, '#8a6a2a');
+      const { cx, cy } = this.lockCenter();
+      const R = 92;
+      // Kilit yüzü: pirinç göbek, anahtar yuvası
+      const g = ctx.createRadialGradient(cx - 26, cy - 26, 8, cx, cy, R + 10);
+      g.addColorStop(0, '#d8b45a');
+      g.addColorStop(1, '#5e4418');
+      U.circle(ctx, cx, cy, R, g);
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R - 1, 0, U.TAU);
+      ctx.stroke();
+      U.circle(ctx, cx, cy, 58, '#8a6a2a');
       ctx.fillStyle = '#2a1e10';
-      U.fillRoundRect(ctx, cx - 6, cy - 44, 12, 60, 5);
+      U.fillRoundRect(ctx, cx - 5, cy - 36, 10, 48, 5);
+      // Delinen delik: ilerledikçe büyür, kenarları parlak metal
+      const hole = 3 + U.clamp01(d.progress) * 9;
+      U.circle(ctx, cx, cy, hole + 2, 'rgba(230,230,235,0.55)');
+      U.circle(ctx, cx, cy, hole, '#0d0a06');
       // Hedef ve tolerans halkası
       ctx.strokeStyle = 'rgba(61,220,132,0.8)';
       ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
       ctx.beginPath();
       ctx.arc(cx, cy, d.tol, 0, U.TAU);
       ctx.stroke();
+      ctx.setLineDash([]);
       // İlerleme halkası
       ctx.strokeStyle = C.COLORS.gold;
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 7;
       ctx.beginPath();
-      ctx.arc(cx, cy, 124, -Math.PI / 2, -Math.PI / 2 + U.TAU * U.clamp01(d.progress));
+      ctx.arc(cx, cy, R + 12, -Math.PI / 2, -Math.PI / 2 + U.TAU * U.clamp01(d.progress));
       ctx.stroke();
-      // Matkap ucu (sapmayla birlikte)
-      const bx = cx + d.ox;
-      const by = cy + d.oy;
+
+      // Matkap (uç, sapmayla birlikte hedefin üstünde)
+      const on = I.mouse.down && d.cool <= 0;
+      const jit = d.shake * 1.6;
+      const bx = cx + d.ox + (jit ? U.rand(-jit, jit) : 0);
+      const by = cy + d.oy + (jit ? U.rand(-jit, jit) : 0);
+      this.drawDrillTool(ctx, bx, by, t, on);
+
+      // Talaş ve kıvılcımlar
+      for (const c of this.chips) {
+        const a = U.clamp01(c.life / c.max);
+        if (c.spark) {
+          ctx.strokeStyle = `rgba(255,${170 + Math.round(a * 80)},80,${a})`;
+          ctx.lineWidth = c.size;
+          U.line(ctx, c.x, c.y, c.x - c.vx * 0.03, c.y - c.vy * 0.03);
+        } else {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.rotate(c.rot);
+          ctx.strokeStyle = `rgba(210,212,220,${a})`;
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(0, 0, c.size, 0, Math.PI * 1.3);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // Göstergeler (sağ kenar)
       const hot = U.clamp01(d.heat);
+      const gx = w / 2 + 170;
+      const gy = py + 76;
+      this.gauge(ctx, gx, gy, 200, d.pressure, DRILL_BAND, L('BASKI'), '#4aa8ff');
+      this.gauge(ctx, gx + 46, gy, 200, d.heat, null, L('ISI'), hot > 0.75 ? '#ff3043' : '#ff8c2e');
+      // Yedek uçlar
+      for (let k = 0; k < 3; k++) this.drawSpareBit(ctx, gx + 104, gy + 8 + k * 56, k < d.bits);
+      D.text(ctx, L('UÇ'), gx + 104, gy + 218, { size: 11, align: 'center', weight: 'bold', color: '#9aa3c7' });
+      D.text(ctx, Math.round(U.clamp01(d.progress) * 100) + '%', gx + 50, gy + 246, { size: 18, align: 'center', weight: 'bold', color: C.COLORS.gold });
+      D.text(ctx, L('Sol tuşu basılı tut: del · Baskıyı yeşil bantta tut'), w / 2, py + PANEL_H - 78, { size: 12, align: 'center', color: '#dfe3f5' });
+      D.text(ctx, L('Uç kayar: fareyle yeşil halkada tut'), w / 2, py + PANEL_H - 62, { size: 12, align: 'center', color: '#dfe3f5' });
+    }
+
+    /**
+     * Akülü matkap, yandan görünüm. (tx, ty) matkap ucunun ucu; gövde sağa uzanır.
+     * Dönen helezon, ısınan uç, basılı tetik, titreşim ve akü göstergesi.
+     */
+    drawDrillTool(ctx, tx, ty, t, on) {
+      const d = this.drill;
+      const hot = U.clamp01(d.heat);
+      const S = 0.8;
       ctx.save();
-      ctx.translate(bx, by);
-      ctx.rotate(d.spin);
-      ctx.strokeStyle = `rgb(${200 + hot * 55},${200 - hot * 140},${200 - hot * 180})`;
-      ctx.lineWidth = 3;
-      for (let k = 0; k < 3; k++) {
-        ctx.rotate(U.TAU / 3);
-        U.line(ctx, 0, 0, 14, 0);
+      ctx.translate(tx, ty);
+      ctx.rotate(0.06);
+      ctx.scale(S, S);
+
+      // Gölge
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(170, 160, 110, 14, 0, 0, U.TAU);
+      ctx.fill();
+
+      // --- Matkap ucu (0..74): kırıldıysa kısa kalır ---
+      const bitLen = d.snapT > 0 ? 30 : 74;
+      const steel = ctx.createLinearGradient(0, -5, 0, 5);
+      steel.addColorStop(0, '#f2f4f8');
+      steel.addColorStop(0.5, '#9aa0aa');
+      steel.addColorStop(1, '#5a606a');
+      ctx.fillStyle = steel;
+      ctx.beginPath();
+      ctx.moveTo(74, -5);
+      ctx.lineTo(10, -5);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(10, 5);
+      ctx.lineTo(74, 5);
+      ctx.closePath();
+      if (d.snapT > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(74 - bitLen, -8, bitLen, 16);
+        ctx.clip();
+        ctx.fillStyle = steel;
+        ctx.fillRect(74 - bitLen, -5, bitLen, 10);
+        ctx.restore();
+      } else {
+        ctx.fill();
+        // Helezon kanalları (dönüşle kayar)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(4, -5, 70, 10);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(40,44,52,0.75)';
+        ctx.lineWidth = 2;
+        const off = (d.spin * 9) % 12;
+        for (let x = -12 + off; x < 80; x += 12) U.line(ctx, x, 6, x + 7, -6);
+        ctx.restore();
+        // Isınan uç (maviden kırmızıya tav rengi)
+        if (hot > 0.05) {
+          const hg = ctx.createLinearGradient(0, 0, 40, 0);
+          hg.addColorStop(0, `rgba(255,${Math.round(120 - hot * 90)},40,${0.25 + hot * 0.65})`);
+          hg.addColorStop(1, 'rgba(255,120,40,0)');
+          ctx.fillStyle = hg;
+          ctx.fillRect(0, -6, 40, 12);
+        }
+      }
+
+      // --- Mandren (74..112): tırtıllı gövde ---
+      const chuck = ctx.createLinearGradient(0, -16, 0, 16);
+      chuck.addColorStop(0, '#3a3d44');
+      chuck.addColorStop(0.35, '#6a6e78');
+      chuck.addColorStop(1, '#1a1c20');
+      ctx.fillStyle = chuck;
+      ctx.beginPath();
+      ctx.moveTo(74, -9);
+      ctx.lineTo(84, -15);
+      ctx.lineTo(112, -17);
+      ctx.lineTo(112, 17);
+      ctx.lineTo(84, 15);
+      ctx.lineTo(74, 9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 1;
+      const koff = (d.spin * 5) % 5;
+      for (let x = 86 + koff; x < 111; x += 5) U.line(ctx, x, -15, x, 15);
+      // Tork ayar halkası
+      ctx.fillStyle = '#26282e';
+      U.fillRoundRect(ctx, 112, -21, 14, 42, 3);
+      ctx.fillStyle = '#e6e8ee';
+      for (let k = 0; k < 4; k++) ctx.fillRect(117, -16 + k * 10, 4, 2);
+
+      // --- Motor gövdesi (126..262): kırmızı kasa, siyah kauçuk kaplama ---
+      const body = ctx.createLinearGradient(0, -30, 0, 30);
+      body.addColorStop(0, '#ff5a5f');
+      body.addColorStop(0.3, '#d8232f');
+      body.addColorStop(1, '#7a0f18');
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.moveTo(126, -24);
+      ctx.quadraticCurveTo(140, -32, 170, -32);
+      ctx.lineTo(236, -32);
+      ctx.quadraticCurveTo(264, -32, 264, -6);
+      ctx.quadraticCurveTo(264, 24, 238, 26);
+      ctx.lineTo(140, 26);
+      ctx.quadraticCurveTo(126, 24, 126, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Parlama
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      U.fillRoundRect(ctx, 150, -28, 84, 5, 2);
+      // Kauçuk yan panel
+      ctx.fillStyle = '#1c1d22';
+      U.fillRoundRect(ctx, 146, -8, 70, 22, 8);
+      // Havalandırma yarıkları (motor dönerken içte kıvılcım parıltısı)
+      for (let k = 0; k < 5; k++) {
+        const vx = 224 + k * 7;
+        ctx.fillStyle = '#16171b';
+        U.fillRoundRect(ctx, vx, -20, 3, 22, 1.5);
+        if (on && Math.random() < 0.35) {
+          ctx.fillStyle = 'rgba(120,180,255,0.7)';
+          ctx.fillRect(vx, -12 + Math.random() * 8, 3, 2);
+        }
+      }
+      // İleri/geri anahtarı
+      ctx.fillStyle = '#2a2c32';
+      U.fillRoundRect(ctx, 186, 22, 14, 8, 2);
+
+      // --- Tabanca kabzası ---
+      ctx.fillStyle = '#1c1d22';
+      ctx.beginPath();
+      ctx.moveTo(196, 24);
+      ctx.lineTo(240, 24);
+      ctx.lineTo(234, 124);
+      ctx.lineTo(196, 124);
+      ctx.quadraticCurveTo(186, 70, 196, 24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      for (let y = 44; y < 118; y += 8) U.line(ctx, 200, y, 230, y - 3);
+      // Tetik (basılıyken içeri girer)
+      const tr = on ? 5 : 0;
+      ctx.fillStyle = '#d8232f';
+      ctx.beginPath();
+      ctx.moveTo(186 + tr, 34);
+      ctx.quadraticCurveTo(176 + tr, 46, 184 + tr, 62);
+      ctx.lineTo(194, 60);
+      ctx.lineTo(194, 34);
+      ctx.closePath();
+      ctx.fill();
+
+      // --- Akü ---
+      const bat = ctx.createLinearGradient(0, 120, 0, 156);
+      bat.addColorStop(0, '#2a2c32');
+      bat.addColorStop(1, '#0e0f12');
+      ctx.fillStyle = bat;
+      U.fillRoundRect(ctx, 172, 120, 92, 36, 6);
+      ctx.fillStyle = '#d8232f';
+      ctx.fillRect(172, 128, 92, 4);
+      // Şarj ledleri: ısı arttıkça akü "zorlanır"
+      for (let k = 0; k < 4; k++) {
+        const lit = k < 4 - Math.floor(hot * 3);
+        U.circle(ctx, 232 + k * 7, 144, 2.2, lit ? (on ? '#3ddc84' : '#2a8a54') : '#3a3d44');
+      }
+
+      // Motor ısısı: gövdeden duman
+      if (hot > 0.7 && Math.random() < 0.5) {
+        ctx.fillStyle = `rgba(200,200,210,${(hot - 0.7) * 0.9})`;
+        U.circle(ctx, U.rand(150, 250), -40 - Math.random() * 30, U.rand(6, 14), ctx.fillStyle);
       }
       ctx.restore();
-      U.circle(ctx, bx, by, 4, '#fff');
-      if (I.mouse.down && d.cool <= 0 && Math.random() < 0.6) {
-        ctx.fillStyle = '#ffb347';
-        ctx.fillRect(bx + U.rand(-10, 10), by + U.rand(-10, 10), 2, 2);
-      }
-      // Göstergeler
-      const gx = w / 2 + 70;
-      const gy = py + 90;
-      this.gauge(ctx, gx, gy, 220, d.pressure, DRILL_BAND, L('BASKI'), '#4aa8ff');
-      this.gauge(ctx, gx + 50, gy, 220, d.heat, null, L('ISI'), hot > 0.75 ? '#ff3043' : '#ff8c2e');
-      // Uçlar
-      for (let k = 0; k < 3; k++) {
-        ctx.fillStyle = k < d.bits ? '#d9dde4' : 'rgba(255,255,255,0.15)';
-        U.fillRoundRect(ctx, gx + 110, gy + k * 34, 10, 26, 3);
-      }
-      D.text(ctx, L('UÇ'), gx + 115, gy + 120, { size: 11, align: 'center', weight: 'bold', color: '#9aa3c7' });
-      D.text(ctx, L('Sol tuşu basılı tut: del · Baskıyı yeşil bantta tut'), w / 2 + 170, gy + 170, { size: 12, align: 'center', color: '#dfe3f5' });
-      D.text(ctx, L('Uç kayar: fareyle yeşil halkada tut'), w / 2 + 170, gy + 190, { size: 12, align: 'center', color: '#dfe3f5' });
-      D.text(ctx, Math.round(U.clamp01(d.progress) * 100) + '%', cx, cy + 150, { size: 16, align: 'center', weight: 'bold', color: C.COLORS.gold });
+    }
+
+    /** Göstergede yedek matkap ucu simgesi */
+    drawSpareBit(ctx, x, y, ok) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.globalAlpha = ok ? 1 : 0.2;
+      ctx.fillStyle = '#9aa0aa';
+      ctx.beginPath();
+      ctx.moveTo(-4, 0);
+      ctx.lineTo(0, -6);
+      ctx.lineTo(4, 0);
+      ctx.lineTo(4, 40);
+      ctx.lineTo(-4, 40);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(30,32,38,0.8)';
+      ctx.lineWidth = 1.5;
+      for (let k = 2; k < 36; k += 6) U.line(ctx, -4, k + 4, 4, k);
+      ctx.fillStyle = '#3a3d44';
+      ctx.fillRect(-5, 34, 10, 10);
+      ctx.restore();
     }
 
     drawPick(ctx, w, h, t, px, py) {

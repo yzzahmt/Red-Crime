@@ -982,8 +982,12 @@
     W.panel = null;
     W.guardSpawns = [];
     const makeCam = (x, y, dir, outdoor, room) => {
-      const a0 = dir > 0 ? 0.18 : Math.PI - 1.35;
-      const a1 = dir > 0 ? 1.35 : Math.PI - 0.18;
+      // Duvara monte dış kameralar kendi altlarını göremez: tarama dik aşağıya
+      // inmez, montaj noktasının hemen altı (ön kapı önü) kör noktadır.
+      // Aksi hâlde dış kapıyı kırarken oyuncu her taramada yakalanıyordu.
+      const down = outdoor ? 1.0 : 1.35;
+      const a0 = dir > 0 ? 0.18 : Math.PI - down;
+      const a1 = dir > 0 ? down : Math.PI - 0.18;
       return {
         x,
         y,
