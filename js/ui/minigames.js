@@ -18,14 +18,11 @@
    *  1) MATKAP: sol tuşu basılı tut = matkap döner, baskı artar; bırak = baskı
    *     düşer. Baskıyı yeşil bantta tut; fazla baskı ucu ısıtır ve kırar.
    *     Uç dönerken sapar: fareyle hedef deliğin üstünde tutarak karşıla.
-   *  2) GERDİRME + MAYMUNCUK: iki el ayrı kontrol edilir. Fare tekerleği
-   *     gerdirme telini ayarlar (el yorulur, gerdirme kendiliğinden kayar;
-   *     bantta tut). Sol tuş basılıyken pimin altında yukarı sürükleyerek kaldır.
-   *     Yalnızca "sıkışan" pim kesme çizgisinde oturur; fazla kaldırmak düşürür.
+   *  2) MAYMUNCUK: sol tuş basılıyken pimin altında yukarı sürükle; pim kesme
+   *     çizgisine gelince oturur (sıra yok). Fazla kaldırmak pimi düşürür.
    *  Arayüz: update(dt) -> null | 'win' | 'cancel' | 'fail'
    * =================================================================== */
   const DRILL_BAND = [0.5, 0.78]; // ideal baskı aralığı
-  const TENSION_BAND = [0.35, 0.65]; // ideal gerdirme aralığı
   const PANEL_W = 640;
   const PANEL_H = 440;
 
@@ -61,7 +58,7 @@
         ox: 0, // ucun hedefe göre son konumu
         oy: 0,
         driftA: U.rand(0, U.TAU),
-        rate: (0.24 - lvl * 0.018) * (scene.drill ? 1.6 : 1), // sn başına ilerleme (tam baskı + tam hizada)
+        rate: (0.8 - lvl * 0.05) * (scene.drill ? 1.5 : 1), // sn başına ilerleme (tam baskı + tam hizada)
         tol: 16 + skill * 2, // hizalama toleransı (px)
         noiseT: 0,
         cool: 0,
@@ -71,20 +68,11 @@
       this.chips = [];
 
       // Pimler (sıkışma sırası rastgele: gerçek kilitlerde işleme toleransı)
-      const n = this.withDrill ? Math.min(6, 3 + lvl) : Math.min(4, 2 + Math.ceil(lvl / 2));
+      const n = this.withDrill ? Math.min(4, 2 + Math.ceil(lvl / 2)) : Math.min(3, 1 + Math.ceil(lvl / 2));
       this.pins = [];
       for (let i = 0; i < n; i++) this.pins.push({ lift: 0, shear: U.rand(0.45, 0.8), set: false, shake: 0, dwell: 0 });
-      this.order = U.shuffle(this.pins.map((_, i) => i));
-      this.tension = 0.2;
-      this.tensionDrift = 0;
-      this.lowT = 0;
-      this.pinTol = 0.05 + skill * 0.008 + (scene.stethoscope ? 0.02 : 0);
+      this.pinTol = 0.08 + skill * 0.01 + (scene.stethoscope ? 0.03 : 0);
       this.hover = -1;
-    }
-
-    get binding() {
-      for (const i of this.order) if (!this.pins[i].set) return i;
-      return -1;
     }
 
     say(text, col) {
@@ -129,7 +117,7 @@
       const on = m.down && d.cool <= 0;
 
       // Baskı: basılıyken yükselir, bırakınca düşer (tüy dokunuşla ayarlanır)
-      d.pressure = U.clamp(d.pressure + (on ? 0.55 : -0.9) * dt, 0, 1);
+      d.pressure = U.clamp(d.pressure + (on ? 1.1 : -1.4) * dt, 0, 1);
       // Isı: baskının küpüyle artar, bırakınca soğur
       const over = Math.max(0, d.pressure - DRILL_BAND[1]);
       d.heat = U.clamp(d.heat + (on ? Math.pow(d.pressure, 3) * 0.22 + over * 1.6 : 0) * dt - (on ? 0.05 : 0.3) * dt, 0, 1.2);
@@ -140,7 +128,7 @@
       d.by = U.damp(d.by, m.y - cy, 7, dt);
       if (on) {
         d.driftA += U.rand(-1.5, 1.5) * dt;
-        const push = (18 + this.lvl * 6) * d.pressure;
+        const push = (10 + this.lvl * 3) * d.pressure;
         d.dx += Math.cos(d.driftA) * push * dt;
         d.dy += Math.sin(d.driftA) * push * dt;
         d.spin += dt * (20 + d.pressure * 40);
@@ -248,32 +236,20 @@
     updatePick(dt) {
       const m = I.mouse;
       const lay = this.pinLayout();
-      // Gerdirme: tekerlek yukarı = artır, aşağı = azalt (W/S yedek). Yorulan el
-      // yüzünden gerdirme yavaşça kayar; sürekli düzeltmek gerekir.
-      const wheel = -m.wheel * 0.06 + ((I.act('up') ? 1 : 0) - (I.act('down') ? 1 : 0)) * 0.5 * dt;
-      this.tensionDrift = U.clamp(this.tensionDrift + U.rand(-0.25, 0.25) * dt, -0.06, 0.06);
-      this.tension = U.clamp(this.tension + wheel + this.tensionDrift * dt, 0, 1);
-      const inBand = this.tension >= TENSION_BAND[0] && this.tension <= TENSION_BAND[1];
-      const tooHigh = this.tension > TENSION_BAND[1];
-
       // Hangi pimin altındayız, maymuncuk ne kadar kaldırıyor
       const i = Math.floor((m.x - lay.x0) / lay.cw);
       this.hover = i >= 0 && i < lay.n ? i : -1;
       const pickLift = U.clamp((lay.base - m.y) / lay.travel, 0, 1.1);
-      const bind = this.binding;
 
       for (let k = 0; k < this.pins.length; k++) {
         const p = this.pins[k];
         if (p.set) continue;
-        const engaged = k === this.hover && m.down;
-        // Fazla gerdirmede pimler sıkışır, zor hareket eder
-        const stiff = tooHigh ? 2 : 14;
-        const target = engaged ? pickLift : 0;
-        p.lift = U.damp(p.lift, target, target > p.lift ? stiff : 10, dt);
+        const target = k === this.hover && m.down ? pickLift : 0;
+        p.lift = U.damp(p.lift, target, target > p.lift ? 16 : 10, dt);
 
-        if (k === bind && inBand && Math.abs(p.lift - p.shear) <= this.pinTol) {
+        if (Math.abs(p.lift - p.shear) <= this.pinTol) {
           p.dwell += dt;
-          if (p.dwell >= 0.18) {
+          if (p.dwell >= 0.08) {
             p.set = true;
             p.lift = p.shear;
             RC.Audio.play('safeClick', { vol: 1, pitch: 0.8 + this.pins.filter((q) => q.set).length * 0.08 });
@@ -283,34 +259,14 @@
         } else {
           p.dwell = 0;
         }
-        // Fazla kaldırma (overset): sıkışan pim kesme çizgisini geçerse düşer
-        if (k === bind && inBand && p.lift > p.shear + this.pinTol * 2.5) {
+        // Fazla kaldırma: pim kesme çizgisini geçerse düşer ve tıkırdar
+        if (p.lift > p.shear + this.pinTol * 2.5) {
           p.lift = 0;
           p.shake = 1;
-          this.tension = Math.max(0, this.tension - 0.25);
           RC.Audio.play('metal', { vol: 0.45, intensity: 0.3 });
-          this.noise(0.14, 'lock');
+          this.noise(0.12, 'lock');
           this.say(L('Pim fazla kalktı ve düştü.'), '#ff8c2e');
         }
-      }
-
-      // Gerdirme bırakılırsa en son oturan pim düşer
-      if (this.tension < TENSION_BAND[0] * 0.5) {
-        this.lowT += dt;
-        if (this.lowT > 0.35) {
-          this.lowT = 0;
-          const setOnes = this.order.filter((k) => this.pins[k].set);
-          if (setOnes.length) {
-            const last = this.pins[setOnes[setOnes.length - 1]];
-            last.set = false;
-            last.lift = 0;
-            last.shake = 1;
-            RC.Audio.play('tick', { vol: 0.6, pitch: 0.7 });
-            this.say(L('Gerdirme gevşedi: bir pim düştü.'), '#ff8c2e');
-          }
-        }
-      } else {
-        this.lowT = 0;
       }
 
       if (this.pins.every((p) => p.set)) {
@@ -329,7 +285,7 @@
       D.panel(ctx, px, py, PANEL_W, PANEL_H, { accent: C.COLORS.gold });
       D.text(ctx, L('KİLİDİ KIR'), w / 2, py + 38, { size: 26, font: C.FONT_TITLE, align: 'center', color: C.COLORS.gold });
       const drill = this.stage === 'drill';
-      const stageTxt = !this.withDrill ? 'MAYMUNCUK' : drill ? '1/2 · MATKAP' : '2/2 · GERDİRME + MAYMUNCUK';
+      const stageTxt = !this.withDrill ? 'MAYMUNCUK' : drill ? '1/2 · MATKAP' : '2/2 · MAYMUNCUK';
       D.text(ctx, L(stageTxt), px + 20, py + 38, { size: 13, weight: 'bold', color: '#9aa3c7' });
       if (drill) this.drawDrill(ctx, w, h, t, px, py);
       else this.drawPick(ctx, w, h, t, px, py);
@@ -671,12 +627,9 @@
       ctx.lineTo(tipX, tipY + 26);
       ctx.stroke();
       ctx.lineCap = 'butt';
-      // Gerdirme göstergesi
-      const gx = px + PANEL_W - 56;
-      this.gauge(ctx, gx, top, 220, this.tension, TENSION_BAND, L('GERDİRME'), this.tension > TENSION_BAND[1] ? '#ff3043' : '#4aa8ff');
       D.text(ctx, `${this.pins.filter((p) => p.set).length}/${n}`, px + PANEL_W - 20, py + 38, { size: 16, align: 'right', color: '#9aa3c7', weight: 'bold' });
-      D.text(ctx, L('Tekerlek (veya W/S) = gerdirme · Sol tuşla pimin altında yukarı sürükle'), w / 2, top + 266, { size: 13, align: 'center', color: '#dfe3f5' });
-      D.text(ctx, L('Önce sıkışan pim oturur; hangisi olduğunu hisset'), w / 2, top + 284, { size: 12, align: 'center', color: '#9aa3c7' });
+      D.text(ctx, L('Sol tuşla pimin altında yukarı sürükle: yeşil çizgide oturur'), w / 2, top + 266, { size: 13, align: 'center', color: '#dfe3f5' });
+      D.text(ctx, L('Fazla kaldırırsan pim düşer ve ses çıkar'), w / 2, top + 284, { size: 12, align: 'center', color: '#9aa3c7' });
     }
   }
 
