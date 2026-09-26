@@ -5,6 +5,8 @@
 (function (RC) {
   'use strict';
   Object.assign(RC.I18N.EN, {
+  "Dil": "Language",
+  "Türkçe": "Türkçe",
   "Beceriksiz herif.": "Useless fool.",
   "Kamera": "Camera",
   "Lazer": "Laser",

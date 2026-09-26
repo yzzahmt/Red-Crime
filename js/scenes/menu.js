@@ -260,6 +260,24 @@
       items.push(new UI.Toggle(R({ label: 'Fareyle Nişan', get: () => s().mouseAim, set: set('mouseAim') })));
       items.push(new UI.Toggle(R({ label: 'Ses Halkaları', get: () => s().noiseRings, set: set('noiseRings') })));
       items.push(new UI.Toggle(R({ label: 'FPS Göster', get: () => s().showFps, set: set('showFps') })));
+      // Dil: seçenekler her dilde kendi adıyla görünür. Metinler çizimde çevrildiği
+      // için değişiklik anında bütün arayüze (duraklatılmış soygun dahil) yansır.
+      items.push(
+        new UI.Choice(
+          R({
+            label: 'Dil',
+            get: () => RC.I18N.lang,
+            set: (v) => {
+              RC.setLang(v);
+              S.setSetting('langChosen', true);
+            },
+            options: [
+              { value: 'tr', label: 'Türkçe' },
+              { value: 'en', label: 'English' },
+            ],
+          })
+        )
+      );
       const by = top + rowH * 6 + 12;
       items.push(new UI.Button({ x: x1, y: by, w: colW, h: 52, label: 'TAM EKRAN', icon: 'play', onClick: () => RC.Game.toggleFullscreen(), fontSize: 17 }));
       const resetBtn = new UI.Button({
