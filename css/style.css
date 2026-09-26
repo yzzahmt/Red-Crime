@@ -37,23 +37,12 @@ canvas#game {
   z-index: 10;
 }
 #loader.hide { opacity: 0; pointer-events: none; }
-#loader .ball {
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ff7a88, #e8283c 55%, #7a0f1c);
-  position: relative;
-  animation: bounce 0.8s ease-in-out infinite alternate;
-  box-shadow: 0 0 40px rgba(232, 40, 60, 0.5);
-}
-#loader .mask {
-  position: absolute;
-  left: 8px;
-  right: 4px;
-  top: 26px;
-  height: 18px;
-  background: #15161d;
-  border-radius: 10px;
+#loader .app-icon {
+  width: min(220px, 40vmin);
+  height: min(220px, 40vmin);
+  border-radius: 14%;
+  box-shadow: 0 0 60px rgba(232, 40, 60, 0.45);
+  animation: pulse 1.2s ease-in-out infinite alternate;
 }
 #loader .title {
   font-family: "Bungee", Impact, sans-serif;
@@ -66,4 +55,9 @@ canvas#game {
 @keyframes bounce {
   from { transform: translateY(0) scale(1.05, 0.95); }
   to { transform: translateY(-26px) scale(0.97, 1.03); }
+}
+
+@keyframes pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.04); }
 }

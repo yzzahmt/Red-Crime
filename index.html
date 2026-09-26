@@ -9,15 +9,33 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <!-- Uygulama simgesi: tarayıcı sekmesi, masaüstü kısayolu / yüklenen uygulama -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#8f1020" />
 </head>
 <body>
   <canvas id="game"></canvas>
   <div id="loader">
-    <div class="ball"><div class="mask"></div></div>
-    <div class="title">RED <span>CRIME</span></div>
+    <img class="app-icon" src="assets/logo.png" alt="Red Crime" />
     <div class="sub">Yükleniyor...</div>
   </div>
 
+  <script>
+    // Yükleme yazısı kayıtlı dilde (ilk açılışta her iki dil)
+    (function () {
+      var sub = document.querySelector('#loader .sub');
+      try {
+        var d = JSON.parse(localStorage.getItem('redcrime.save.v1') || 'null');
+        var st = d && d.settings;
+        if (!st || !st.langChosen) sub.textContent = 'Yükleniyor · Loading...';
+        else if (st.lang === 'en') { sub.textContent = 'Loading...'; document.documentElement.lang = 'en'; }
+      } catch (e) {}
+    })();
+  </script>
   <script src="js/core/utils.js"></script>
   <script src="js/core/config.js"></script>
   <script src="js/core/i18n.js"></script>

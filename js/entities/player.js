@@ -427,8 +427,9 @@
       const W = scene.world;
       const inTruck = scene.inTruckZone(this);
 
-      // Yakındaki alınabilir eşya (HUD için her karede)
-      this.grabCandidate = this.held ? null : this.findGrabbable();
+      // Alınacak eşya: fare kullanılıyorsa imlecin altındaki (RC.DragLoot.hover),
+      // değilse en yakındaki. SPACE ve tıklama aynı eşyayı hedefler.
+      this.grabCandidate = this.held ? null : RC.DragLoot.hover || this.findGrabbable();
 
       if (I.actPressed('grab')) {
         if (this.held) {

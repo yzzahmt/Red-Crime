@@ -21,29 +21,62 @@
 
   const REACH = 96; // el ile tutma menzili (dünya px)
   const PICK_PAD = 6; // imleç çevresindeki tolerans
+  const MOUSE_ACTIVE_SEC = 3; // fare bu kadar süre hareketsizse hedefi klavye seçer
   const GENTLE_SPEED = 160; // bunun altındaki bırakış yavaşça koyma sayılır
   const q = [];
 
   const DragLoot = {
-    /** Oyuncunun elinden imlecin altındaki, menzilde ve görüş hattında olan eşya */
+    /** Alınabilir durumda mı (yerinde, duvarda ya da yavaşlamış düşüşte) */
+    grabbable(it) {
+      return it.state === 'rest' || it.state === 'wall' || (it.state === 'falling' && Math.abs(it.vy) < 120);
+    },
+
+    /**
+     * İmlecin TAM altındaki, menzilde ve görüş hattındaki eşya. Üst üste binen
+     * eşyalarda imlecin üstünde olduğu en küçük eşya seçilir (üstteki küçük
+     * eşya, altındaki büyük eşyadan önce). İmleç bir eşyanın içinde değilse
+     * PICK_PAD kadar yakındaki en yakın eşya.
+     */
     itemUnderCursor(scene) {
       const p = scene.player;
       const W = scene.world;
       const m = scene.camera.screenToWorld(I.mouse.x, I.mouse.y);
       W.itemGrid.query(m.x - PICK_PAD, m.y - PICK_PAD, PICK_PAD * 2, PICK_PAD * 2, q);
-      let best = null;
-      let bd = Infinity;
       const hx = p.cx;
       const hy = p.bodyY - 8;
+      let best = null;
+      let bestKey = Infinity;
       for (const it of q) {
-        if (it.state !== 'rest' && it.state !== 'wall') continue;
-        const d = U.dist(hx, hy, it.cx, it.cy);
-        if (d > REACH + Math.max(it.w, it.h) / 2 || d >= bd) continue;
+        if (!this.grabbable(it)) continue;
+        if (U.dist(hx, hy, it.cx, it.cy) > REACH + Math.max(it.w, it.h) / 2) continue;
         if (!RC.Physics.lineOfSight(W.grid, hx, hy, it.cx, it.cy)) continue;
-        best = it;
-        bd = d;
+        const inside = m.x >= it.x && m.x <= it.x + it.w && m.y >= it.y && m.y <= it.y + it.h;
+        const gap = Math.hypot(Math.max(it.x - m.x, 0, m.x - it.x - it.w), Math.max(it.y - m.y, 0, m.y - it.y - it.h));
+        // İçerideyse alana göre (küçük önce), değilse uzaklığa göre; içeridekiler her zaman önce
+        const key = inside ? it.w * it.h : 1e6 + gap;
+        if (key < bestKey) {
+          bestKey = key;
+          best = it;
+        }
       }
       return best;
+    },
+
+    /** Fare şu an hedef seçmek için kullanılıyor mu (yeni hareket ya da tıklama) */
+    mouseActive() {
+      return I.mouse.inside && (I.mouse.pressed || I.mouseRecentlyUsed(MOUSE_ACTIVE_SEC));
+    },
+
+    /**
+     * Karedeki tek hedef: fare kullanılıyorsa imlecin altındaki eşya. Oyuncu
+     * güncellemesinden ÖNCE çağrılır; SPACE (Player.grabCandidate) ve tıklama
+     * aynı eşyayı hedefler, ekranda tek bir vurgu görünür.
+     */
+    updateHover(scene) {
+      const p = scene.player;
+      const ok = p && scene.world && scene.state === 'play' && !scene.drag && !p.hiddenInTruck && !p.climbing;
+      this.hover = ok && this.mouseActive() ? this.itemUnderCursor(scene) : null;
+      if (!scene.drag) this.setCursor(this.hover ? 'grab' : '');
     },
 
     update(scene, dt) {
@@ -61,9 +94,10 @@
         return;
       }
       if (!drag) {
-        this.hover = I.mouseRecentlyUsed(6) ? this.itemUnderCursor(scene) : null;
-        this.setCursor(this.hover ? 'grab' : '');
-        if (this.hover && I.mouse.pressed) this.begin(scene, this.hover);
+        // Hedef updateHover() ile karenin başında seçildi; SPACE aynı karede
+        // onu aldıysa artık alınabilir değildir.
+        const h = this.hover;
+        if (h && I.mouse.pressed && this.grabbable(h)) this.begin(scene, h);
         return;
       }
       this.setCursor('grabbing');
@@ -80,6 +114,7 @@
       }
       scene.releaseAbove(it);
       W.itemGrid.remove(it);
+      scene.activeItems.delete(it);
       const wasWall = it.state === 'wall';
       it.state = 'drag';
       it.angle = 0;
@@ -198,17 +233,8 @@
     drawWorld(ctx, scene, t) {
       const p = scene.player;
       const drag = scene.drag;
-      if (!drag) {
-        const h = this.hover;
-        if (h && scene.state === 'play') {
-          ctx.strokeStyle = U.rgba(h.rarity.color, 0.55 + Math.sin(t * 6) * 0.25);
-          ctx.lineWidth = 2;
-          ctx.setLineDash([4, 3]);
-          ctx.strokeRect(h.x - 3, h.y - 3, h.w + 6, h.h + 6);
-          ctx.setLineDash([]);
-        }
-        return;
-      }
+      // Vurgu tek yerden çizilir (Heist.drawWorldLabels: grabCandidate = hover)
+      if (!drag) return;
       const it = drag.item;
       const hand = p.handPos;
       const col = drag.strain > 0.95 ? '#ff8c2e' : 'rgba(230,232,238,0.7)';

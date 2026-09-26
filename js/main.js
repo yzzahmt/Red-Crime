@@ -47,7 +47,8 @@
           const skip = Number(q.get('t') || 0);
           for (let i = 0; i < skip * 60; i++) this.current.update(1 / 60);
         } else {
-          this.switchTo('splash', {});
+          // İlk açılış: önce dil sorulur, seçilen dil kaydedilir
+          this.switchTo(RC.Save.settings.langChosen ? 'splash' : 'language', {});
         }
         this.last = performance.now();
         requestAnimationFrame((ts) => this.loop(ts));

@@ -15,7 +15,7 @@
   const DECK_Y = -330;
   const WORLD_W = 2600;
 
-  const NAMES = { boss: 'REİS', hero: 'TOPAÇ' };
+  const NAMES = { boss: 'REİS', hero: 'RED CRIME' };
 
   RC.Scenes.briefing = {
     enter(params) {
@@ -386,7 +386,8 @@
         ctx.rotate(-0.08);
         ctx.font = `28px ${C.FONT_TITLE}`;
         ctx.textAlign = 'center';
-        const tags = { 380: 'RC', 1280: 'TOPAÇ', 2180: 'REİS' };
+        // Anonimlik: grafitilerde kişi adı yok, yalnızca lakap ve sokak sözleri
+        const tags = { 380: 'RC', 1280: 'RED CRIME', 2180: RC.L('İZ BIRAKMA') };
         ctx.strokeStyle = '#111';
         ctx.lineWidth = 5;
         ctx.strokeText(tags[px], 0, 0);

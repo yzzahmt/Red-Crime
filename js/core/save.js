@@ -24,6 +24,7 @@
         hints: true,
         skipIntro: false,
         lang: 'tr', // tr | en
+        langChosen: false, // ilk açılışta dil seçim ekranı gösterildi mi
       },
       progress: {
         unlocked: 1,

@@ -876,6 +876,7 @@
       }
 
       // Oyuncu
+      RC.DragLoot.updateHover(this);
       if (this.state !== 'escape' || this.leftBehind) {
         if (!p.hiddenInTruck) p.update(dt);
       }

@@ -20,7 +20,7 @@
     const px = w / 2 - pw / 2;
     const py = h - 170;
     D.panel(ctx, px, py, pw, 140, { accent: who === 'boss' ? '#ffc83d' : C.COLORS.red });
-    D.text(ctx, who === 'boss' ? L('REİS') : 'TOPAÇ', px + 24, py + 36, { size: 18, font: C.FONT_TITLE, color: who === 'boss' ? '#ffc83d' : C.COLORS.red });
+    D.text(ctx, who === 'boss' ? L('REİS') : 'RED CRIME', px + 24, py + 36, { size: 18, font: C.FONT_TITLE, color: who === 'boss' ? '#ffc83d' : C.COLORS.red });
     ctx.font = `19px ${C.FONT_UI}`;
     const lines = U.wrapText(ctx, text.slice(0, Math.floor(shown)), pw - 48);
     lines.slice(0, 3).forEach((ln, i) => D.text(ctx, ln, px + 24, py + 70 + i * 26, { size: 19, color: '#f2f4ff' }));

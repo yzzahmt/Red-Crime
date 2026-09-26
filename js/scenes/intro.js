@@ -1,5 +1,6 @@
 /* =========================================================================
  *  RED CRIME - Açılış
+ *  0) Dil seçimi (yalnızca ilk açılışta): Türkçe / English
  *  1) Splash: "Başlamak için tıkla" (tarayıcı sesi açmak için etkileşim ister)
  *  2) Sinematik açılış: yağmurlu şehir, şimşek, çatıda koşan Red Crime,
  *     polis projektörü, harf harf düşen RED CRIME logosu, glitch efektleri.
@@ -13,6 +14,168 @@
   const I = RC.Input;
 
   RC.Scenes = RC.Scenes || {};
+
+  /* =====================================================================
+   * Uygulama simgesi (assets/logo.png): açılış ve dil ekranında
+   * =================================================================== */
+  const APP_ICON = typeof Image !== 'undefined' ? new Image() : null;
+  if (APP_ICON) APP_ICON.src = 'assets/logo.png';
+  RC.drawAppIcon = function (ctx, cx, cy, size, alpha = 1) {
+    const x = cx - size / 2;
+    const y = cy - size / 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    // Gölge + parıltı
+    ctx.shadowColor = 'rgba(232,40,60,0.45)';
+    ctx.shadowBlur = size * 0.12;
+    ctx.fillStyle = '#12060a';
+    U.fillRoundRect(ctx, x, y, size, size, size * 0.14);
+    ctx.shadowBlur = 0;
+    if (APP_ICON && APP_ICON.complete && APP_ICON.naturalWidth) {
+      ctx.beginPath();
+      U.roundRect(ctx, x, y, size, size, size * 0.14);
+      ctx.clip();
+      ctx.drawImage(APP_ICON, x, y, size, size);
+    } else {
+      D.text(ctx, 'RC', cx, cy + size * 0.12, { size: size * 0.4, font: C.FONT_TITLE, align: 'center', color: C.COLORS.red });
+    }
+    ctx.restore();
+  };
+
+  /* =====================================================================
+   * DİL SEÇİMİ (ilk açılış)
+   * =================================================================== */
+  const LANGS = [
+    { id: 'tr', label: 'TÜRKÇE', sub: 'Türkçe' },
+    { id: 'en', label: 'ENGLISH', sub: 'English' },
+  ];
+
+  function drawFlag(ctx, id, x, y, w, h) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    if (id === 'tr') {
+      ctx.fillStyle = '#e30a17';
+      ctx.fillRect(x, y, w, h);
+      const cx = x + w * 0.36;
+      const cy = y + h / 2;
+      U.circle(ctx, cx, cy, h * 0.25, '#ffffff');
+      U.circle(ctx, cx + h * 0.0625, cy, h * 0.2, '#e30a17');
+      // Yıldız
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      const sx = cx + h * 0.29;
+      const r1 = h * 0.125;
+      for (let k = 0; k < 10; k++) {
+        const r = k % 2 ? r1 * 0.4 : r1;
+        const a = Math.PI + (k * Math.PI) / 5;
+        ctx.lineTo(sx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Birleşik Krallık (sadeleştirilmiş)
+      ctx.fillStyle = '#012169';
+      ctx.fillRect(x, y, w, h);
+      ctx.lineCap = 'butt';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = h * 0.2;
+      U.line(ctx, x, y, x + w, y + h);
+      U.line(ctx, x + w, y, x, y + h);
+      ctx.strokeStyle = '#c8102e';
+      ctx.lineWidth = h * 0.07;
+      U.line(ctx, x, y, x + w, y + h);
+      U.line(ctx, x + w, y, x, y + h);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + w / 2 - h * 0.17, y, h * 0.34, h);
+      ctx.fillRect(x, y + h / 2 - h * 0.17, w, h * 0.34);
+      ctx.fillStyle = '#c8102e';
+      ctx.fillRect(x + w / 2 - h * 0.1, y, h * 0.2, h);
+      ctx.fillRect(x, y + h / 2 - h * 0.1, w, h * 0.2);
+    }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  }
+
+  RC.Scenes.language = {
+    enter() {
+      this.t = 0;
+      this.sel = RC.I18N.lang === 'en' ? 1 : 0;
+      this.done = false;
+      // Tarayıcı dili İngilizce ise varsayılan seçim English
+      try {
+        if (!RC.Save.settings.langChosen && navigator.language && !/^tr/i.test(navigator.language)) this.sel = 1;
+      } catch (e) {
+        /* yok */
+      }
+    },
+    cards() {
+      const w = RC.Game.W;
+      const h = RC.Game.H;
+      const cw = 260;
+      const ch = 150;
+      const gap = 40;
+      const y = h * 0.62 - ch / 2;
+      return LANGS.map((l, i) => ({ ...l, x: w / 2 - cw - gap / 2 + i * (cw + gap), y, w: cw, h: ch }));
+    },
+    choose(i) {
+      if (this.done) return;
+      this.done = true;
+      const lang = LANGS[i].id;
+      RC.Audio.unlock();
+      RC.setLang(lang);
+      RC.Save.setSetting('langChosen', true);
+      document.title = 'Red Crime';
+      const sub = document.querySelector('#loader .sub');
+      if (sub) sub.textContent = RC.L('Yükleniyor...');
+      RC.Audio.play('uiSelect');
+      RC.Game.go('splash');
+    },
+    update(dt) {
+      this.t += dt;
+      const cards = this.cards();
+      if (I.actPressed('menuLeft')) this.sel = 0;
+      if (I.actPressed('menuRight')) this.sel = 1;
+      cards.forEach((c, i) => {
+        if (I.hover(c.x, c.y, c.w, c.h)) {
+          if (I.mouseRecentlyUsed(1)) this.sel = i;
+          if (I.mouse.pressed) this.choose(i);
+        }
+      });
+      if (this.t > 0.3 && (I.actPressed('confirm') || I.wasPressed('Space'))) this.choose(this.sel);
+    },
+    render(ctx) {
+      const w = RC.Game.W;
+      const h = RC.Game.H;
+      const t = this.t;
+      const g = ctx.createRadialGradient(w / 2, h * 0.35, 20, w / 2, h * 0.4, Math.max(w, h) * 0.75);
+      g.addColorStop(0, '#2a0a12');
+      g.addColorStop(1, '#05060f');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+      const k = U.ease.outBack(U.clamp01(t / 0.6));
+      RC.drawAppIcon(ctx, w / 2, h * 0.27, Math.min(200, h * 0.3) * k, U.clamp01(t * 3));
+      // Her iki dilde başlık (seçim yapılmadan önce)
+      D.text(ctx, 'DİL SEÇİN  ·  CHOOSE LANGUAGE', w / 2, h * 0.46, { size: 22, font: C.FONT_TITLE, align: 'center', color: '#f2f4ff' });
+      this.cards().forEach((c, i) => {
+        const on = i === this.sel;
+        const lift = on ? -4 + Math.sin(t * 4) * 1.5 : 0;
+        D.panel(ctx, c.x, c.y + lift, c.w, c.h, { accent: on ? C.COLORS.red : '#3a3f58' });
+        drawFlag(ctx, c.id, c.x + c.w / 2 - 45, c.y + lift + 22, 90, 60);
+        D.text(ctx, c.label, c.x + c.w / 2, c.y + lift + 118, { size: 24, font: C.FONT_TITLE, align: 'center', color: on ? '#fff' : '#9aa3c7' });
+        if (on) {
+          ctx.strokeStyle = U.rgba(C.COLORS.red, 0.6 + Math.sin(t * 5) * 0.3);
+          ctx.lineWidth = 3;
+          U.strokeRoundRect(ctx, c.x - 4, c.y + lift - 4, c.w + 8, c.h + 8, 14);
+        }
+      });
+      D.text(ctx, '←  →  ·  ENTER', w / 2, h * 0.62 + 110, { size: 15, align: 'center', color: '#6a7294' });
+      D.text(ctx, 'Daha sonra Ayarlar’dan değiştirebilirsin  ·  You can change this later in Settings', w / 2, h - 30, { size: 13, align: 'center', color: '#5a6284' });
+    },
+  };
 
   /* =====================================================================
    * Ortak: logo çizimi
@@ -127,15 +290,11 @@
       ctx.fillStyle = '#05060f';
       ctx.fillRect(0, 0, w, h);
       const t = this.t;
-      // Nabız atan top
-      const s = 1 + Math.sin(t * 3) * 0.05;
-      ctx.save();
-      ctx.translate(w / 2, h / 2 - 40);
-      ctx.scale(s, s);
-      D.character(ctx, { x: 0, y: 0, r: 46, body: '#e8283c', balaclava: '#1c1d26', eyes: 'open', mouth: 'grin', look: { x: Math.sin(t) * 0.6, y: 0 }, arms: [{ x: -58, y: 30 }, { x: 58, y: 30 }], sleeve: '#1d1f29', glove: '#2a2d3e', t });
-      ctx.restore();
-      D.text(ctx, 'RED CRIME', w / 2, h / 2 + 70, { size: 36, font: C.FONT_TITLE, align: 'center', color: '#fff' });
-      D.text(ctx, 'Başlamak için tıkla ya da bir tuşa bas', w / 2, h / 2 + 110, { size: 18, align: 'center', color: '#9aa3c7', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
+      // Uygulama simgesi (hafif nabız)
+      const s = 1 + Math.sin(t * 3) * 0.02;
+      const size = Math.min(300, h * 0.46) * s;
+      RC.drawAppIcon(ctx, w / 2, h / 2 - 50, size, U.clamp01(t * 2.5));
+      D.text(ctx, 'Başlamak için tıkla ya da bir tuşa bas', w / 2, h / 2 + size / 2 + 10, { size: 18, align: 'center', color: '#9aa3c7', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
       D.text(ctx, '🎧 Kulaklıkla oynaman önerilir', w / 2, h - 40, { size: 14, align: 'center', color: '#5a6284' });
     },
   };
@@ -179,7 +338,8 @@
       }
       this.flash = Math.max(0, this.flash - dt * 2.5);
       // Altyazı (daktilo)
-      const cap = 'Bir gece... şehrin en sessiz hırsızı işbaşında.';
+      // Önce çevir, sonra harf harf kes (kesilmiş metin sözlükte eşleşmez)
+      const cap = RC.L('Bir gece... şehrin en sessiz hırsızı işbaşında.');
       const k = U.clamp01((t - 1.6) / 2.2);
       const n = Math.floor(cap.length * k);
       if (n > this.caption.length && t < 5) RC.Audio.play('typewriter', { vol: 0.5 });
