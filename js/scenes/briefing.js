@@ -38,6 +38,10 @@
       this.barrel = { x: 960 };
       this.truck = { x: WORLD_W + 400, target: 1560, state: 'away', door: 0, drive: 0 };
       this.stage = 'walk'; // walk → talk → truck → board → leave
+      // Sahne her girişte sıfırlanmalı: aksi hâlde ikinci bölümde kamyon yola çıkar ama geçiş tetiklenmez
+      this.boardT = 0;
+      this.leaving = false;
+      this.gone = false;
       this.dlg = null;
       this.lineIdx = 0;
       this.trainT = 6;
@@ -60,6 +64,20 @@
     },
 
     /* ------------------------------------------------------------------ */
+    /** Dokunmatik: yürürken kaydırma hareketleri, dokunuş = konuş / kamyona bin */
+    touchGestures() {
+      return this.stage === 'walk' || this.stage === 'truck';
+    },
+    touchTap() {
+      return 'interact';
+    },
+    touchButtons() {
+      if ((this.stage === 'walk' || this.stage === 'talk') && RC.Save.progress.seenBriefing[this.level]) {
+        return [{ x: RC.Game.W - 84, y: 56, w: 64, h: 64, name: 'back', hold: true, draw: 'play' }];
+      }
+      return [];
+    },
+
     startDialog() {
       this.stage = 'talk';
       this.lineIdx = 0;
@@ -322,7 +340,7 @@
       }
       D.text(ctx, RC.L('BÖLÜM {n} · BRİFİNG', { n: this.cfg.id }), 20, h - 18, { size: 13, color: '#5a6284' });
       if (RC.Save.progress.seenBriefing[this.level] && (this.stage === 'walk' || this.stage === 'talk')) {
-        D.text(ctx, 'Atlamak için ESC basılı tut', w - 20, h - 18, { size: 13, align: 'right', color: '#9aa3c7' });
+        D.text(ctx, RC.T('Atlamak için ESC basılı tut', 'Atlamak için ▶ düğmesini basılı tut'), w - 20, h - 18, { size: 13, align: 'right', color: '#9aa3c7' });
         if (this.skipHold > 0) D.bar(ctx, w - 200, h - 44, 180, 6, this.skipHold / 0.6);
       }
       // Sinema şeritleri (diyalogda)

@@ -142,7 +142,7 @@
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, w, 44);
       ctx.fillRect(0, h - 44, w, 44);
-      D.text(ctx, 'SPACE: geç', w - 20, h - 16, { size: 13, align: 'right', color: '#5a6284' });
+      D.text(ctx, RC.T('SPACE: geç', 'Dokun: geç'), w - 20, h - 16, { size: 13, align: 'right', color: '#5a6284' });
     },
   };
 })(window.RC);

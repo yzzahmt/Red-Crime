@@ -18,6 +18,8 @@
       this.p = p;
       this.cfg = C.LEVELS[p.level];
       this.t = 0;
+      this.countDone = false;
+      this.celebrated = false;
       this.counter = 0;
       this.starsShown = 0;
       this.particles = new RC.Particles(800);

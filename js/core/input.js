@@ -7,26 +7,26 @@
   'use strict';
 
   const BINDINGS = {
-    left: ['KeyA', 'ArrowLeft'],
-    right: ['KeyD', 'ArrowRight'],
-    jump: ['KeyW', 'ArrowUp'],
-    up: ['KeyW', 'ArrowUp'],
-    crouch: ['KeyS', 'ArrowDown'],
-    down: ['KeyS', 'ArrowDown'],
-    grab: ['Space'],
-    interact: ['KeyE'],
-    run: ['ShiftLeft', 'ShiftRight'],
-    throw: ['KeyQ'],
-    flashlight: ['KeyF'],
-    pause: ['Escape', 'KeyP'],
-    map: ['KeyM', 'Tab'],
+    left: ['KeyA', 'ArrowLeft', 'Touch.left'],
+    right: ['KeyD', 'ArrowRight', 'Touch.right'],
+    jump: ['KeyW', 'ArrowUp', 'Touch.up', 'Touch.jump'],
+    up: ['KeyW', 'ArrowUp', 'Touch.up'],
+    crouch: ['KeyS', 'ArrowDown', 'Touch.down'],
+    down: ['KeyS', 'ArrowDown', 'Touch.down'],
+    grab: ['Space', 'Touch.grab'],
+    interact: ['KeyE', 'Touch.interact'],
+    run: ['ShiftLeft', 'ShiftRight', 'Touch.run'],
+    throw: ['KeyQ', 'Touch.throw'],
+    flashlight: ['KeyF', 'Touch.flashlight'],
+    pause: ['Escape', 'KeyP', 'Touch.pause'],
+    map: ['KeyM', 'Tab', 'Touch.map'],
     confirm: ['Enter', 'Space', 'NumpadEnter'],
-    back: ['Escape', 'Backspace'],
+    back: ['Escape', 'Backspace', 'Touch.back'],
     menuUp: ['KeyW', 'ArrowUp'],
     menuDown: ['KeyS', 'ArrowDown'],
     menuLeft: ['KeyA', 'ArrowLeft'],
     menuRight: ['KeyD', 'ArrowRight'],
-    skip: ['Enter', 'Space', 'Escape'],
+    skip: ['Enter', 'Space', 'Escape', 'Touch.tap'],
   };
 
   /** Ekranda gösterilecek tuş adları */
@@ -44,6 +44,23 @@
     map: 'M',
   };
 
+  /** Dokunmatik modda tuş kapaklarında gösterilen hareketler */
+  const TOUCH_LABELS = {
+    A: '◀ KAYDIR',
+    D: 'KAYDIR ▶',
+    W: '▲ KAYDIR',
+    S: '▼ KAYDIR',
+    SHIFT: 'UZUN KAYDIR',
+    SPACE: 'DOKUN',
+    E: 'DOKUN',
+    Q: 'BASILI TUT',
+    F: 'BASILI TUT',
+    'S + SPACE': '▼ + DOKUN',
+    ENTER: 'DOKUN',
+    ESC: 'II',
+    M: 'HARİTA',
+  };
+
   const PREVENT = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Backspace']);
 
   const Input = {
@@ -52,6 +69,7 @@
     released: Object.create(null),
     anyPressed: false,
     lastKey: null,
+    pulses: [],
     bindings: BINDINGS,
     labels: KEY_LABELS,
     mouse: {
@@ -132,24 +150,8 @@
         },
         { passive: false }
       );
-      // Dokunmatik: basit dokunuş = tık
-      canvas.addEventListener(
-        'touchstart',
-        (e) => {
-          const t = e.changedTouches[0];
-          toLogical(t);
-          RC.Audio && RC.Audio.unlock();
-          this.mouse.down = true;
-          this.mouse.pressed = true;
-          this.anyPressed = true;
-          e.preventDefault();
-        },
-        { passive: false }
-      );
-      canvas.addEventListener('touchend', () => {
-        this.mouse.down = false;
-        this.mouse.released = true;
-      });
+      // Dokunmatik: js/core/touch.js (kaydırma hareketleri + menüde tıklama)
+      if (RC.Touch) RC.Touch.init(canvas);
     },
 
     down(code) {
@@ -192,7 +194,13 @@
       const m = this.mouse;
       return m.x >= x && m.x <= x + w && m.y >= y && m.y <= y + h;
     },
-    consume(code) {
+    /** Ekranda gösterilecek tuş adı: dokunmatikte hareket adına çevrilir */
+    keyText(label) {
+      if (!RC.Touch || !RC.Touch.active) return label;
+      const t = TOUCH_LABELS[label];
+      return t ? RC.L(t) : label;
+    },
+        consume(code) {
       this.pressed[code] = false;
     },
     consumeAction(name) {
@@ -205,6 +213,8 @@
       this.mouse.pressed = false;
     },
     endFrame() {
+      for (const c of this.pulses) this.keys[c] = false;
+      this.pulses.length = 0;
       for (const k in this.pressed) this.pressed[k] = false;
       for (const k in this.released) this.released[k] = false;
       this.anyPressed = false;

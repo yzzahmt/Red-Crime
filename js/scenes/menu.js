@@ -147,6 +147,7 @@
           this.build();
           this.menu.focus = 3;
         }),
+        ...(RC.Platform.canQuit ? [mk('ÇIKIŞ', 'cross', () => RC.Platform.quit())] : []),
       ]);
       this.menu.focus = focus;
     },
@@ -169,8 +170,8 @@
       D.panel(ctx, 20, h - 64, 280, 46, { r: 10 });
       D.icon(ctx, 'money', 44, h - 41, 22, C.COLORS.gold);
       D.text(ctx, U.formatMoney(p.wallet), 64, h - 34, { size: 20, font: C.FONT_TITLE, color: C.COLORS.gold });
-      D.text(ctx, 'v1.0 · Web', w - 20, h - 24, { size: 12, align: 'right', color: '#5a6284' });
-      D.text(ctx, '↑↓ seç · ENTER onayla', w / 2, h - 24, { size: 13, align: 'center', color: '#5a6284' });
+      D.text(ctx, 'v1.0 · ' + ({ win32: 'Windows', darwin: 'macOS', linux: 'Linux', android: 'Android', ios: 'iOS' }[RC.Platform.os] || 'Web'), w - 20, h - 24, { size: 12, align: 'right', color: '#5a6284' });
+      if (!RC.Touch.active) D.text(ctx, '↑↓ seç · ENTER onayla', w / 2, h - 24, { size: 13, align: 'center', color: '#5a6284' });
     },
   };
 
@@ -329,7 +330,7 @@
       ctx.fillRect(0, 0, w, RC.Game.H);
       D.text(ctx, 'AYARLAR', w / 2, 96, { size: 48, font: C.FONT_TITLE, align: 'center', color: '#fff', shadow: true });
       this.menu.draw(ctx, this.t);
-      D.text(ctx, '←→ değiştir · ↑↓ gez · ESC geri', w / 2, RC.Game.H - 24, { size: 13, align: 'center', color: '#5a6284' });
+      if (!RC.Touch.active) D.text(ctx, '←→ değiştir · ↑↓ gez · ESC geri', w / 2, RC.Game.H - 24, { size: 13, align: 'center', color: '#5a6284' });
       if (!RC.Save.available) D.text(ctx, 'Uyarı: tarayıcı kayda izin vermiyor, ilerleme kaydedilmeyecek.', w / 2, RC.Game.H - 48, { size: 13, align: 'center', color: '#ff8c2e' });
     },
   };
@@ -384,7 +385,19 @@
       const titles = ['KONTROLLER', 'GİZLİLİK', 'GANİMET'];
       D.text(ctx, `${this.page + 1}/3 · ${RC.L(titles[this.page])}`, w / 2, py + 40, { size: 22, font: C.FONT_TITLE, align: 'center', color: C.COLORS.gold });
       if (this.page === 0) {
-        const rows = [
+        const rows = RC.Touch.active ? [
+          [['◀ KAYDIR', 'KAYDIR ▶'], 'Kaydırıp tut: yürü'],
+          [['▲ KAYDIR'], 'Zıpla (el merdiveninde tut: tırman)'],
+          [['▼ KAYDIR'], 'Çömel — sessiz yürür, saklanırsın'],
+          [['▼ KAYDIR', '▲ KAYDIR'], 'Rafın / platformun üstünden aşağı in'],
+          [['UZUN KAYDIR'], 'Koş (daha hızlı ama gürültülü)'],
+          [['DOKUN'], 'Al / çuvala at / bırak / yükle / aç / kaç'],
+          [['▼ KAYDIR', 'DOKUN'], 'Çömel, ikinci parmakla dokun: SESSİZCE koy'],
+          [['BASILI TUT'], 'Eşya elindeyken: fırlat'],
+          [['BASILI TUT'], 'Elin boşken: el fenerini aç / kapat'],
+          [['HARİTA'], 'Mini haritaya basılı tut: büyük harita'],
+          [['II'], 'Duraklat (sağ üstteki düğme)'],
+        ] : [
           [['A', 'D'], 'Sola / sağa yürü'],
           [['W'], 'Zıpla (el merdiveninde: tırman)'],
           [['S'], 'Çömel — sessiz yürür, saklanırsın'],
@@ -433,7 +446,7 @@
         const lines = [
           ['bag', 'Küçük eşyalar (yüzük, saat, para...) doğrudan ÇUVALA girer. Çuval dolunca kamyona boşalt.'],
           ['hand', 'Büyük eşyaları başının üstünde taşırsın. Ağır eşyalar seni yavaşlatır ve daha sesli yürütür.'],
-          ['truck', 'Sadece KAMYONA yüklenen ganimet sayılır! Kamyonun arkasında SPACE ile yükle.'],
+          ['truck', 'Sadece KAMYONA yüklenen ganimet sayılır! Kamyonun arkasında SPACE ile yükle (dokunmatik: dokun).'],
           ['star', 'Nadirlik: Sıradan · Nadir (mavi) · Epik (mor) · Efsanevi (altın). Parlayan eşyaları kaçırma.'],
           ['safe', 'Her evde bir KASA var. Anahtarını bul, kasanın önünde E\'ye bas ve kilidi aç.'],
           ['fragile', 'Vazo, cam, ayna, porselen KIRILIR. Kırılan eşya hem değer kaybı hem büyük gürültü demek.'],

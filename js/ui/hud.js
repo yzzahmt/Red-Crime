@@ -173,6 +173,7 @@
       const rowH = 44;
       const ph = 12 + list.length * rowH + (scene.dog ? 30 : 0);
       const x = xr - pw;
+      this.residentsBottom = y + ph;
       D.panel(ctx, x, y, pw, ph, { accent: '#8fb7ff' });
       list.forEach((r, i) => {
         const ry = y + 10 + i * rowH;
@@ -206,6 +207,7 @@
     drawGadgets(ctx, scene, w, h, t) {
       const list = C.DARKWEB.filter((g) => g.key);
       const owned = list.filter((g) => RC.Save.gadgetCount(g.id) > 0);
+      this.gadgetRects = [];
       if (!owned.length) return;
       const sz = 46;
       const gap = 6;
@@ -215,6 +217,7 @@
       list.forEach((g, i) => {
         const n = RC.Save.gadgetCount(g.id);
         const x = x0 + i * (sz + gap);
+        if (n) this.gadgetRects.push({ x, y, w: sz, h: sz, key: g.key });
         ctx.globalAlpha = n ? 1 : 0.35;
         ctx.fillStyle = 'rgba(4,18,10,0.88)';
         U.fillRoundRect(ctx, x, y, sz, sz, 8);
@@ -345,7 +348,9 @@
         ctx.font = `bold 15px ${C.FONT_UI}`;
         pr.text = RC.Lx(pr.text);
         const tw = ctx.measureText(pr.text).width;
-        const kw = Math.max(30, pr.key.length * 10 + 16);
+        ctx.font = `bold 14px ${C.FONT_UI}`;
+        const kw = Math.max(30, ctx.measureText(RC.Input.keyText(pr.key)).width + 18);
+        ctx.font = `bold 15px ${C.FONT_UI}`;
         const total = kw + 10 + tw + 24;
         const x = w / 2 - total / 2;
         D.panel(ctx, x - 6, y - 6, total + 12, 42, { r: 10, shadow: false, fill: 'rgba(10,12,24,0.85)', fillTop: 'rgba(20,24,44,0.85)' });
@@ -384,6 +389,7 @@
       const ph = b.h * sc + 20;
       const x = big ? RC.Game.W / 2 - pw / 2 : xr - pw;
       const y = big ? RC.Game.H / 2 - ph / 2 : yb - ph;
+      if (!big) this.rect = { x, y, w: pw, h: ph };
       D.panel(ctx, x, y, pw, ph, { accent: '#4aa8ff', r: 10 });
       const ox = x + 10 + (pw - 20 - b.w * sc) / 2;
       const oy = y + 10;

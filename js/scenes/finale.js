@@ -83,6 +83,7 @@
   RC.Scenes.execution = {
     enter() {
       this.t = 0;
+      this.wiped = false;
       this.idx = 0;
       this.shown = 0;
       this.phase = 'talk';
@@ -147,7 +148,7 @@
           D.text(ctx, L('OYUN BİTTİ'), w / 2, h / 2 - 20, { size: 64, font: C.FONT_TITLE, align: 'center', color: '#e8283c', alpha: a });
           D.text(ctx, L('Tefeci\'ye olan borç hiç ödenmedi. Tüm ilerleme silindi.'), w / 2, h / 2 + 30, { size: 18, align: 'center', color: '#9aa3c7', alpha: a });
           D.text(ctx, L('Her şey 1. bölümden, köprü altından yeniden başlıyor.'), w / 2, h / 2 + 58, { size: 18, align: 'center', color: '#9aa3c7', alpha: a });
-          if (this.phaseT > 3.5) D.text(ctx, L('Devam etmek için bir tuşa bas'), w / 2, h - 60, { size: 16, align: 'center', color: '#5a6284', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
+          if (this.phaseT > 3.5) D.text(ctx, L(RC.T('Devam etmek için bir tuşa bas', 'Devam etmek için dokun')), w / 2, h - 60, { size: 16, align: 'center', color: '#5a6284', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
         }
         return;
       }
@@ -377,7 +378,7 @@
           D.text(ctx, txt, w / 2, y, { size, font: kind.startsWith('title') ? C.FONT_TITLE : C.FONT_UI, align: 'center', color: kind === 'head' ? '#ffc83d' : '#ffffff', weight: kind === 'head' ? 'bold' : '' });
           y += size + 22;
         }
-        D.text(ctx, L('ENTER: geç'), w - 20, h - 16, { size: 12, align: 'right', color: '#9aa3c7' });
+        D.text(ctx, L(RC.T('ENTER: geç', 'Dokun: geç')), w - 20, h - 16, { size: 12, align: 'right', color: '#9aa3c7' });
         return;
       }
       // Hediye

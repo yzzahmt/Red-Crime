@@ -84,7 +84,7 @@
 
   /** Klavye tuşu kapağı çizer; genişliği döndürür. */
   Draw.key = (ctx, label, x, y, h = 30, o = {}) => {
-    label = RC.Lx(label);
+    label = RC.Lx(RC.Input.keyText(label));
     ctx.font = `bold ${Math.round(h * 0.45)}px ${C.FONT_UI}`;
     const tw = ctx.measureText(label).width;
     const w = Math.max(h, tw + h * 0.6);

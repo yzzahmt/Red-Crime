@@ -3,6 +3,11 @@
   --bg: #05060f;
   --red: #e8283c;
   --text: #f2f4ff;
+  /* Çentikli telefonlar: oyun alanı güvenli bölgenin içinde kalır */
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
@@ -18,6 +23,9 @@ html, body {
 }
 canvas#game {
   display: block;
+  position: fixed;
+  left: 0;
+  top: 0;
   width: 100vw;
   height: 100vh;
   outline: none;

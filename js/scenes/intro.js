@@ -172,7 +172,7 @@
           U.strokeRoundRect(ctx, c.x - 4, c.y + lift - 4, c.w + 8, c.h + 8, 14);
         }
       });
-      D.text(ctx, '←  →  ·  ENTER', w / 2, h * 0.62 + 110, { size: 15, align: 'center', color: '#6a7294' });
+      if (!RC.Touch.active) D.text(ctx, '←  →  ·  ENTER', w / 2, h * 0.62 + 110, { size: 15, align: 'center', color: '#6a7294' });
       D.text(ctx, 'Daha sonra Ayarlar’dan değiştirebilirsin  ·  You can change this later in Settings', w / 2, h - 30, { size: 13, align: 'center', color: '#5a6284' });
     },
   };
@@ -294,7 +294,7 @@
       const s = 1 + Math.sin(t * 3) * 0.02;
       const size = Math.min(300, h * 0.46) * s;
       RC.drawAppIcon(ctx, w / 2, h / 2 - 50, size, U.clamp01(t * 2.5));
-      D.text(ctx, 'Başlamak için tıkla ya da bir tuşa bas', w / 2, h / 2 + size / 2 + 10, { size: 18, align: 'center', color: '#9aa3c7', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
+      D.text(ctx, RC.T('Başlamak için tıkla ya da bir tuşa bas', 'Başlamak için dokun'), w / 2, h / 2 + size / 2 + 10, { size: 18, align: 'center', color: '#9aa3c7', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
       D.text(ctx, '🎧 Kulaklıkla oynaman önerilir', w / 2, h - 40, { size: 14, align: 'center', color: '#5a6284' });
     },
   };
@@ -305,6 +305,7 @@
   RC.Scenes.intro = {
     enter() {
       this.t = 0;
+      this.slashSnd = false;
       this.rain = new RC.BG.Rain(340);
       this.rain.wind = -220;
       this.skyA = new RC.BG.Skyline({ seed: 5, color: '#0b0e22', minH: 180, maxH: 420, width: 1900, windowChance: 0.2 });
@@ -490,7 +491,7 @@
           const a = U.clamp01((t - 7.8) / 0.6);
           D.text(ctx, 'SESSİZ  ·  HIZLI  ·  TEMİZ', w / 2, h * 0.42 + 100, { size: 22, align: 'center', color: '#dfe3f5', alpha: a, weight: 'bold' });
         }
-        if (t > 8.6) D.text(ctx, 'Devam etmek için bir tuşa bas', w / 2, h * 0.86, { size: 18, align: 'center', color: '#9aa3c7', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
+        if (t > 8.6) D.text(ctx, RC.T('Devam etmek için bir tuşa bas', 'Devam etmek için dokun'), w / 2, h * 0.86, { size: 18, align: 'center', color: '#9aa3c7', alpha: 0.5 + Math.sin(t * 4) * 0.5 });
       }
 
       this.particles.render(ctx, null);

@@ -1,0 +1,14 @@
+{
+  "appId": "com.redcrime.game",
+  "appName": "Red Crime",
+  "webDir": "dist/web",
+  "backgroundColor": "#05060f",
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false
+  }
+}

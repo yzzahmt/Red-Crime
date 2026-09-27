@@ -1040,6 +1040,43 @@
       this.prompts = pr.slice(0, 3);
     },
 
+    /* ------------------------ Dokunmatik ------------------------ */
+    /** Oyun sırasında ekran kaydırma hareketleriyle oynanır (js/core/touch.js) */
+    touchGestures() {
+      return this.state === 'play';
+    },
+    /** Dokunuş: ekrandaki ipucuna göre al/bırak/yükle ya da aç/kaç */
+    touchTap() {
+      const p = this.player;
+      if (!p) return 'grab';
+      if (p.held || p.grabCandidate || (p.bag.length && this.inTruckZone(p))) return 'grab';
+      if (this.prompts.some((pr) => pr.key === 'E')) return 'interact';
+      return 'grab';
+    },
+    touchLongPress() {
+      return this.player && this.player.held ? 'throw' : 'flashlight';
+    },
+    touchButtons() {
+      const W = RC.Game.W;
+      const H = RC.Game.H;
+      const out = [];
+      if (this.state === 'minigame' || this.state === 'mg') {
+        out.push({ x: W - 84, y: 20, w: 64, h: 64, name: 'back', code: 'Touch.back', draw: 'close' });
+        return out;
+      }
+      if (this.state !== 'play') return out;
+      const top = (RC.HUD.residentsBottom || 90) + 14;
+      out.push({ x: W - 18 - 60, y: top, w: 60, h: 60, name: 'pause', draw: 'pause' });
+      const mm = RC.Minimap.rect;
+      if (mm) out.push({ x: mm.x, y: mm.y, w: mm.w, h: mm.h, name: 'map', hold: true });
+      for (const g of RC.HUD.gadgetRects || []) out.push({ x: g.x, y: g.y, w: g.w, h: g.h, name: 'gadget' + g.key, code: 'Digit' + g.key });
+      if (this.tutorial && this.tutorial.active && !this.tutorial.finished) {
+        const pw = Math.min(620, W - 40);
+        out.push({ x: W / 2 + pw / 2 - 210, y: 90, w: 210, h: 44, name: 'skipTutorial', code: 'Enter' });
+      }
+      return out;
+    },
+
     /* ------------------------ Duraklatma ------------------------ */
     openPause() {
       this.prevState = this.state;
@@ -1380,7 +1417,7 @@
       for (let i = 0; i < m.rounds; i++) {
         U.circle(ctx, cx - 30 + i * 30, cy + 170, 9, i < m.round ? '#3ddc84' : 'rgba(255,255,255,0.2)');
       }
-      D.text(ctx, 'İbre YEŞİL bölgedeyken SPACE bas!  ·  ESC: vazgeç', cx, cy + 200, { size: 14, align: 'center', color: '#dfe3f5' });
+      D.text(ctx, RC.T('İbre YEŞİL bölgedeyken SPACE bas!  ·  ESC: vazgeç', 'İbre YEŞİL bölgedeyken ekrana dokun!  ·  X: vazgeç'), cx, cy + 200, { size: 14, align: 'center', color: '#dfe3f5' });
       D.text(ctx, 'Hatalı deneme ses çıkarır!', cx, cy - 150, { size: 13, align: 'center', color: '#ff8c2e' });
     },
 

@@ -324,7 +324,7 @@
       ctx.restore();
       D.text(ctx, L('PLANI ONAYLA · YOLA ÇIK'), x + pw / 2, by + 32, { size: 18, font: C.FONT_TITLE, align: 'center', color: '#e8fff0' });
       this.rects.push({ x: x + 10, y: by, w: pw - 20, h: 50, kind: 'confirm' });
-      D.text(ctx, L('↑↓ seç · ←→ değiştir · ENTER onayla · ESC geri'), x + pw / 2, y + ph - 10, { size: 11, align: 'center', color: '#5a7a9a' });
+      if (!RC.Touch.active) D.text(ctx, L('↑↓ seç · ←→ değiştir · ENTER onayla · ESC geri'), x + pw / 2, y + ph - 10, { size: 11, align: 'center', color: '#5a7a9a' });
     },
 
     drawCrewBubble(ctx, x, y, bw, bh, t) {

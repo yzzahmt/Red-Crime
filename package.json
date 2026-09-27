@@ -1,0 +1,83 @@
+{
+  "name": "red-crime",
+  "productName": "Red Crime",
+  "version": "1.0.0",
+  "description": "2D stealth heist game",
+  "private": true,
+  "main": "desktop/main.js",
+  "author": "Red Crime",
+  "scripts": {
+    "serve": "python3 -m http.server 8765",
+    "build:web": "node scripts/build-web.mjs",
+    "desktop": "npm run build:web && electron . --windowed",
+    "dist:win": "npm run build:web && electron-builder --win --x64",
+    "dist:mac": "npm run build:web && electron-builder --mac --universal",
+    "dist:linux": "npm run build:web && electron-builder --linux --x64",
+    "dist:all": "npm run build:web && electron-builder --win --x64 && electron-builder --mac --universal && electron-builder --linux --x64",
+    "mobile:sync": "npm run build:web && cap sync",
+    "android": "npm run mobile:sync && cap open android",
+    "android:bundle": "npm run mobile:sync && cd android && ./gradlew bundleRelease",
+    "ios": "npm run mobile:sync && cap open ios"
+  },
+  "build": {
+    "appId": "com.redcrime.game",
+    "productName": "Red Crime",
+    "copyright": "Copyright © 2026 Red Crime",
+    "directories": {
+      "output": "dist/desktop",
+      "buildResources": "build"
+    },
+    "files": [
+      "desktop/**",
+      "dist/web/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "dir",
+        "zip"
+      ],
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dir",
+        "zip"
+      ],
+      "category": "public.app-category.games",
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "identity": null,
+      "mergeASARs": false
+    },
+    "linux": {
+      "target": [
+        "dir",
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Game",
+      "icon": "build/icon.png",
+      "executableName": "red-crime",
+      "synopsis": "2D stealth heist game"
+    }
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/status-bar": "^8.0.3"
+  },
+  "allowScripts": {
+    "electron@44.4.5": true,
+    "electron-winstaller": false
+  }
+}

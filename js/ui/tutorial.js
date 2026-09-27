@@ -13,14 +13,14 @@
   const I = RC.Input;
 
   const STEPS = [
-    { keys: ['A', 'D'], text: 'Sola ve sağa yürü.', done: (s) => s.moved > 220 },
-    { keys: ['SHIFT'], text: 'SHIFT basılı tutarak koş. Koşmak hızlıdır ama ÇOK gürültü yapar!', done: (s) => s.runT > 0.8 },
-    { keys: ['W'], text: 'Zıpla. Rafların ve mobilyaların üstüne böyle çıkarsın.', done: (s) => s.jumps > 0 },
-    { keys: ['S'], text: 'Çömelerek yürü. Çömelirken neredeyse hiç ses çıkarmazsın.', done: (s) => s.crouchT > 0.7 },
-    { keys: ['F'], text: 'El fenerini kapat, sonra tekrar aç.', done: (s) => s.flashToggles >= 2 },
-    { keys: ['SPACE'], text: 'Eve gir ve bir eşyanın yanında SPACE ile al. Küçük eşyalar çuvala girer.', done: (s) => s.pickups > 0, indoor: true },
-    { keys: ['SPACE'], text: 'Ganimeti kamyonun arkasına götür ve SPACE ile yükle. Sadece kamyondakiler sayılır.', done: (s) => s.loaded > 0, indoor: true },
-    { keys: ['E'], text: "Kapalı bir kapının önünde E'ye basarak aç. Kilitliyse maymuncukla açarsın.", done: (s) => s.doors > 0, indoor: true },
+    { keys: ['A', 'D'], text: 'Sola ve sağa yürü.', touch: 'Parmağını ekranda sola ya da sağa kaydır ve tut: yürürsün.', done: (s) => s.moved > 220 },
+    { keys: ['SHIFT'], text: 'SHIFT basılı tutarak koş. Koşmak hızlıdır ama ÇOK gürültü yapar!', touch: 'Aynı yöne daha uzun kaydır: koşarsın. Hızlıdır ama ÇOK gürültü yapar!', done: (s) => s.runT > 0.8 },
+    { keys: ['W'], text: 'Zıpla. Rafların ve mobilyaların üstüne böyle çıkarsın.', touch: 'Parmağını yukarı fırlat: zıplarsın. Mobilyaların üstüne böyle çıkarsın.', done: (s) => s.jumps > 0 },
+    { keys: ['S'], text: 'Çömelerek yürü. Çömelirken neredeyse hiç ses çıkarmazsın.', touch: 'Aşağı ve yana kaydırıp tut: çömelerek yürürsün. Neredeyse hiç ses çıkmaz.', done: (s) => s.crouchT > 0.7 },
+    { keys: ['F'], text: 'El fenerini kapat, sonra tekrar aç.', touch: 'Ekrana basılı tut: el fenerini kapat, sonra tekrar aç.', done: (s) => s.flashToggles >= 2 },
+    { keys: ['SPACE'], text: 'Eve gir ve bir eşyanın yanında SPACE ile al. Küçük eşyalar çuvala girer.', touch: 'Eve gir ve bir eşyanın yanında ekrana dokun. Küçük eşyalar çuvala girer.', done: (s) => s.pickups > 0, indoor: true },
+    { keys: ['SPACE'], text: 'Ganimeti kamyonun arkasına götür ve SPACE ile yükle. Sadece kamyondakiler sayılır.', touch: 'Ganimeti kamyonun arkasına götür ve dokunarak yükle. Sadece kamyondakiler sayılır.', done: (s) => s.loaded > 0, indoor: true },
+    { keys: ['E'], text: "Kapalı bir kapının önünde E'ye basarak aç. Kilitliyse maymuncukla açarsın.", touch: 'Kapalı bir kapının önünde ekrana dokunarak aç. Kilitliyse maymuncukla açarsın.', done: (s) => s.doors > 0, indoor: true },
     { keys: ['S'], text: 'Saklan: perde ya da dolap önünde hareketsiz dur, kanepe ya da yatak arkasında çömel.', done: (s) => s.hides > 0, indoor: true },
   ];
 
@@ -111,7 +111,7 @@
         D.panel(ctx, px, py, pw, 84, { accent: '#3ddc84' });
         D.text(ctx, 'HAZIRSIN!', w / 2, py + 32, { size: 20, font: C.FONT_TITLE, align: 'center', color: '#3ddc84' });
         D.text(ctx, 'Emekli Öğretmen üst kattaki yatak odasında uyuyor. Kasa anahtarını bul,', w / 2, py + 54, { size: 14, align: 'center', color: '#dfe3f5' });
-        D.text(ctx, 'ganimeti kamyona yükle ve süre bitmeden E ile kaç.', w / 2, py + 72, { size: 14, align: 'center', color: '#dfe3f5' });
+        D.text(ctx, RC.T('ganimeti kamyona yükle ve süre bitmeden E ile kaç.', 'ganimeti kamyona yükle ve süre bitmeden kamyonun yanında dokunarak kaç.'), w / 2, py + 72, { size: 14, align: 'center', color: '#dfe3f5' });
         ctx.globalAlpha = 1;
         return;
       }
@@ -123,7 +123,7 @@
       const ph = 92;
       D.panel(ctx, px, py, pw, ph, { accent: this.doneT > 0 ? '#3ddc84' : '#4aa8ff' });
       D.text(ctx, RC.L('ÖĞRETİCİ {a}/{b}', { a: this.step + 1, b: STEPS.length }), px + 16, py + 24, { size: 12, weight: 'bold', color: '#8fb7ff' });
-      D.text(ctx, 'ENTER: öğreticiyi atla', px + pw - 16, py + 24, { size: 12, align: 'right', color: '#5a6284' });
+      D.text(ctx, RC.T('ENTER: öğreticiyi atla', 'Öğreticiyi atla ▸'), px + pw - 16, py + 24, { size: 12, align: 'right', color: '#5a6284' });
       // Tuşlar
       let kx = px + 16;
       st.keys.forEach((k, i) => {
@@ -134,7 +134,7 @@
         kx += D.key(ctx, k, kx, py + 38, 34, { pressed: Math.sin(this.t * 5) > 0.6 }) + 6;
       });
       ctx.font = `bold 15px ${C.FONT_UI}`;
-      const lines = U.wrapText(ctx, RC.L(st.text), pw - (kx - px) - 30);
+      const lines = U.wrapText(ctx, RC.L(RC.T(st.text, st.touch || st.text)), pw - (kx - px) - 30);
       lines.slice(0, 2).forEach((ln, i) => D.text(ctx, ln, kx + 10, py + 52 + i * 19 - (lines.length > 1 ? 9 : 0), { size: 15, weight: 'bold', color: '#f2f4ff' }));
       // İlerleme noktaları
       for (let i = 0; i < STEPS.length; i++) {

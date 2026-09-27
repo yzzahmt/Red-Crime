@@ -61,8 +61,14 @@
     },
 
     resize() {
-      const cw = window.innerWidth;
-      const ch = window.innerHeight;
+      const css = getComputedStyle(document.documentElement);
+      const inset = (k) => parseFloat(css.getPropertyValue(k)) || 0;
+      const sl = inset('--sal');
+      const st = inset('--sat');
+      const cw = window.innerWidth - sl - inset('--sar');
+      const ch = window.innerHeight - st - inset('--sab');
+      this.canvas.style.left = sl + 'px';
+      this.canvas.style.top = st + 'px';
       this.dpr = Math.min(window.devicePixelRatio || 1, 2);
       this.canvas.width = Math.floor(cw * this.dpr);
       this.canvas.height = Math.floor(ch * this.dpr);
@@ -199,6 +205,7 @@
 
       try {
         if (this.current && !(f.dir > 0 && f.a > 0.98)) {
+          RC.Touch.update();
           this.current.update(dt);
           this.tickTimers(dt);
         }
@@ -220,6 +227,11 @@
         else this.canvas.width = this.canvas.width;
       }
       ctx.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, 0, 0);
+      try {
+        RC.Touch.render(ctx);
+      } catch (e) {
+        /* yalnızca görsel geri bildirim */
+      }
       if (f.a > 0) {
         ctx.fillStyle = `rgba(5,6,15,${U.ease.inOutQuad(U.clamp01(f.a))})`;
         ctx.fillRect(0, 0, this.W, this.H);
@@ -229,6 +241,7 @@
     },
 
     toggleFullscreen() {
+      if (window.RCDesktop) return window.RCDesktop.toggleFullscreen();
       try {
         if (!document.fullscreenElement) document.documentElement.requestFullscreen();
         else document.exitFullscreen();

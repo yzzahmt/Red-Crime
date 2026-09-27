@@ -290,7 +290,7 @@
       if (drill) this.drawDrill(ctx, w, h, t, px, py);
       else this.drawPick(ctx, w, h, t, px, py);
       if (this.msgT > 0) D.text(ctx, this.msg, w / 2, py + (drill ? PANEL_H - 42 : 70), { size: 15, align: 'center', weight: 'bold', color: this.flashCol, alpha: Math.min(1, this.msgT * 2) });
-      D.text(ctx, L('Her ses kapıdan duyulur · ESC: vazgeç'), w / 2, py + PANEL_H - 20, { size: 13, align: 'center', color: '#ff8c2e' });
+      D.text(ctx, L(RC.T('Her ses kapıdan duyulur · ESC: vazgeç', 'Her ses kapıdan duyulur · X: vazgeç')), w / 2, py + PANEL_H - 20, { size: 13, align: 'center', color: '#ff8c2e' });
       if (this.flash > 0) {
         ctx.strokeStyle = U.rgba(this.flashCol, this.flash);
         ctx.lineWidth = 6;
@@ -384,7 +384,7 @@
       for (let k = 0; k < 3; k++) this.drawSpareBit(ctx, gx + 104, gy + 8 + k * 56, k < d.bits);
       D.text(ctx, L('UÇ'), gx + 104, gy + 218, { size: 11, align: 'center', weight: 'bold', color: '#9aa3c7' });
       D.text(ctx, Math.round(U.clamp01(d.progress) * 100) + '%', gx + 50, gy + 246, { size: 18, align: 'center', weight: 'bold', color: C.COLORS.gold });
-      D.text(ctx, L('Sol tuşu basılı tut: del · Baskıyı yeşil bantta tut'), w / 2, py + PANEL_H - 78, { size: 12, align: 'center', color: '#dfe3f5' });
+      D.text(ctx, L(RC.T('Sol tuşu basılı tut: del · Baskıyı yeşil bantta tut', 'Ekrana basılı tut: del · Baskıyı yeşil bantta tut')), w / 2, py + PANEL_H - 78, { size: 12, align: 'center', color: '#dfe3f5' });
       D.text(ctx, L('Uç kayar: fareyle yeşil halkada tut'), w / 2, py + PANEL_H - 62, { size: 12, align: 'center', color: '#dfe3f5' });
     }
 
@@ -769,7 +769,7 @@
       } else {
         D.text(ctx, this.result === 'win' ? L('ERİŞİM SAĞLANDI') : L('ERİŞİM REDDEDİLDİ'), w / 2, py + 240, { size: 26, font: mono, align: 'center', color: this.result === 'win' ? '#3ddc84' : '#ff3043' });
       }
-      D.text(ctx, L('3 hatada alarm çalar · ESC: vazgeç'), w / 2, py + ph - 24, { size: 13, font: mono, align: 'center', color: '#ff8c2e' });
+      D.text(ctx, L(RC.T('3 hatada alarm çalar · ESC: vazgeç', '3 hatada alarm çalar · Kaydır: ok · X: vazgeç')), w / 2, py + ph - 24, { size: 13, font: mono, align: 'center', color: '#ff8c2e' });
       if (this.flash > 0) {
         ctx.strokeStyle = `rgba(61,220,132,${this.flash})`;
         ctx.lineWidth = 6;

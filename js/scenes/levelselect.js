@@ -231,7 +231,7 @@
         D.text(ctx, r[1], ix + 16, py + 30 + j * 24, { size: 14, color: '#f2f4ff' });
       });
       this.menu.draw(ctx, t);
-      D.text(ctx, '←→ bölüm · ↑↓ düğme · ENTER onayla · ESC geri', w / 2, h - 16, { size: 12, align: 'center', color: '#5a6284' });
+      if (!RC.Touch.active) D.text(ctx, '←→ bölüm · ↑↓ düğme · ENTER onayla · ESC geri', w / 2, h - 16, { size: 12, align: 'center', color: '#5a6284' });
     },
   };
 
