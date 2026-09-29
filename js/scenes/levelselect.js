@@ -100,11 +100,24 @@
       });
       this.menu = new UI.Menu([
         new UI.Button({ x: w / 2 - 470, y, w: 190, h: 60, label: 'GERİ', icon: 'back', back: true, fontSize: 17, onClick: () => RC.Game.go('menu') }),
-        new UI.Button({ x: w / 2 - 270, y, w: 200, h: 60, label: 'DÜKKÂN', icon: 'shop', fontSize: 17, onClick: () => RC.Game.go('shop', { select: this.sel }) }),
+        new UI.Button({ x: w / 2 - 270, y, w: 200, h: 60, label: 'DÜKKÂN', icon: 'shop', fontSize: 17, onClick: () => this.openStore('shop', C.SHOP_UNLOCK) }),
         this.btnStart,
-        new UI.Button({ x: w / 2 + 250, y, w: 220, h: 60, label: 'KARANLIK AĞ', icon: 'skull', fontSize: 16, onClick: () => RC.Game.go('darkweb', { select: this.sel }) }),
+        new UI.Button({ x: w / 2 + 250, y, w: 220, h: 60, label: 'KARANLIK AĞ', icon: 'skull', fontSize: 16, onClick: () => this.openStore('darkweb', C.DARKWEB_UNLOCK) }),
       ]);
       this.menu.focus = 2;
+    },
+    /** Karaborsa / Karanlık Ağ: belirli sayıda bölüm bitirilince açılır */
+    storeOpen(need) {
+      const pr = RC.Save.progress;
+      return pr.gameCompleted || pr.stars[need - 1] > 0;
+    },
+    openStore(scene, need) {
+      if (this.storeOpen(need)) {
+        RC.Game.go(scene, { select: this.sel });
+        return;
+      }
+      RC.Audio.play('uiError');
+      this.lockMsg = { text: RC.L('Kilitli: önce {n}. bölümü bitir.', { n: need }), t: 2.5 };
     },
     locked(i) {
       return i + 1 > RC.Save.progress.unlocked;
@@ -119,6 +132,7 @@
     update(dt) {
       this.t += dt;
       RC.MenuBG.update(dt);
+      if (this.lockMsg && (this.lockMsg.t -= dt) <= 0) this.lockMsg = null;
       if (I.actPressed('back')) {
         RC.Audio.play('uiBack');
         RC.Game.go('menu');
@@ -231,6 +245,10 @@
         D.text(ctx, r[1], ix + 16, py + 30 + j * 24, { size: 14, color: '#f2f4ff' });
       });
       this.menu.draw(ctx, t);
+      if (this.lockMsg) {
+        const a = Math.min(1, this.lockMsg.t * 2);
+        D.text(ctx, this.lockMsg.text, w / 2, h - 116, { size: 16, weight: 'bold', align: 'center', color: '#ff8c2e', alpha: a, stroke: 'rgba(0,0,0,0.8)', strokeW: 4 });
+      }
       if (!RC.Touch.active) D.text(ctx, '←→ bölüm · ↑↓ düğme · ENTER onayla · ESC geri', w / 2, h - 16, { size: 12, align: 'center', color: '#5a6284' });
     },
   };

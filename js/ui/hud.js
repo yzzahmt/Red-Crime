@@ -283,14 +283,19 @@
     drawCarry(ctx, scene, x, yb, t) {
       const p = scene.player;
       const slots = p.bagCap;
-      const cols = 6;
-      const rows = Math.ceil(slots / cols);
-      const slot = 30;
+      // En fazla 3 sıra: panel yükselip ses göstergesine binmesin. Dokunmatikte
+      // yuvalar parmakla seçilebilecek kadar büyük; genişlik ekipman şeridine taşmaz.
+      const rows = slots <= 20 ? 2 : 3;
+      const cols = Math.ceil(slots / rows);
+      const maxW = RC.Game.W / 2 + 110 - x - 70;
+      const slot = Math.max(20, Math.min(RC.Touch.active ? 38 : 30, Math.floor((maxW - 16) / cols) - 4));
       const bw = cols * (slot + 4) + 16;
       const bh = rows * (slot + 4) + 40;
       let y = yb - bh;
       // Fareyle sürüklenen ganimetin bırakılacağı hedef (bkz. RC.DragLoot)
       this.bagRect = { x, y, w: bw, h: bh };
+      // Dolu yuvalar: tıkla / dokun → o eşyayı çuvaldan çıkar
+      this.bagSlotRects = [];
       const dragging = scene.drag && I.hover(x, y, bw, bh);
       D.panel(ctx, x, y, bw, bh, { accent: dragging ? C.COLORS.gold : '#8a6a3a' });
       D.icon(ctx, 'bag', x + 18, y + 18, 18, '#c49a6a');
@@ -303,6 +308,11 @@
         U.fillRoundRect(ctx, cx, cy, slot, slot, 5);
         const it = p.bag[i];
         if (it) {
+          this.bagSlotRects.push({ x: cx, y: cy, w: slot, h: slot, i });
+          if (!scene.drag && I.hover(cx, cy, slot, slot)) {
+            ctx.fillStyle = 'rgba(255,140,46,0.35)';
+            U.fillRoundRect(ctx, cx, cy, slot, slot, 5);
+          }
           ctx.strokeStyle = it.rarity.color;
           ctx.lineWidth = 1.5;
           U.strokeRoundRect(ctx, cx + 1, cy + 1, slot - 2, slot - 2, 5);
@@ -321,8 +331,10 @@
         const it = p.held;
         const cw = 250;
         const ch = 92;
-        const cx = x;
+        // Kart ses göstergesine binerse sağa kaydır
+        const cx0 = x;
         const cy = y - ch - 10;
+        const cx = cy < RC.Game.H / 2 + 110 ? cx0 + 44 : cx0;
         D.panel(ctx, cx, cy, cw, ch, { accent: it.rarity.color });
         ctx.fillStyle = 'rgba(0,0,0,0.35)';
         U.fillRoundRect(ctx, cx + 10, cy + 14, 68, 68, 8);

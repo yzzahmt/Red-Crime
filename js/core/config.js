@@ -21,8 +21,11 @@
     STREET_W: 900,
 
     // Soygun süresi karmaşıklığa göre ölçeklenir (sn). Bkz. Config.heistTime()
-    HEIST_TIMES: [300, 480, 600], // 1. bölüm 5 dk, 2. bölüm 8 dk, 3. bölüm 10 dk
+    HEIST_TIMES: [300, 300, 300], // ilk üç bölüm 5 dk
     HEIST_TIME_MAX: 900, // geç dönem kontratlar en fazla 15 dk
+    // Dükkânların açılması için bitirilmesi gereken bölüm sayısı
+    SHOP_UNLOCK: 2, // Karaborsa: 2. bölümü bitir
+    DARKWEB_UNLOCK: 4, // Karanlık Ağ: 4. bölümü bitir
     // Ekonomi dengesi (bölüm hedefine oranla). Tek eşya ya da tek kasa görevi bitirmesin.
     ITEM_VALUE_CAP: 0.12, // bir eşyanın yumuşak tavanı: hedefin %12'si
     SAFE_BUDGET: 0.6, // kasanın toplam içeriği: hedefin ~%60'ı
@@ -516,16 +519,51 @@
      * perm: kalıcı ekipman · diğerleri: tüketilebilir (key: kısayol tuşu)
      * ---------------------------------------------------------------- */
     DARKWEB: [
-      { id: 'lockpick', key: '1', name: 'Elektronik Maymuncuk', desc: 'Kilitli bir kapıyı saniyeler içinde, sessizce açar.', price: 18000, pack: 3, icon: 'key' },
-      { id: 'jammer', key: '2', name: 'Kamera Karıştırıcı', desc: 'Evdeki tüm kameraları 25 saniye boyunca kör eder.', price: 30000, pack: 2, icon: 'eye' },
-      { id: 'sleepgas', key: '3', name: 'Uyku Gazı Bombası', desc: 'Yakınındaki uyanık herkesi (köpek dahil) 25 saniye uyutur.', price: 45000, pack: 2, icon: 'zzz' },
-      { id: 'smoke', key: '4', name: 'Sis Bombası', desc: 'Kalın bir duman bulutu: içindeyken kimse seni göremez.', price: 22000, pack: 2, icon: 'cloud' },
-      { id: 'pistol', key: '6', name: 'Tabanca', desc: 'Çok pahalı. Havaya uyarı atışı: yakındaki herkes korkup kaçar, ama silah sesi 911\'i anında aratır.', price: 750000, pack: 3, icon: 'gun' },
-      { id: 'emp', key: '5', name: 'EMP Cihazı', desc: 'Alarm sistemini, kameraları ve lazerleri tamamen devre dışı bırakır.', price: 70000, pack: 1, icon: 'bolt' },
-      { id: 'nightvision', perm: true, name: 'Gece Görüş Gözlüğü', desc: 'Kalıcı. El feneri olmadan da karanlıkta çok daha geniş görürsün.', price: 90000, icon: 'eye' },
-      { id: 'thermal', perm: true, name: 'Termal Tarayıcı', desc: 'Kalıcı. Duvarların ardındaki herkesi ve kasa anahtarını haritada gösterir.', price: 120000, icon: 'map' },
-      { id: 'bribe', perm: true, name: 'Şoföre Rüşvet', desc: 'Kalıcı. Şoför her soygunda 45 saniye fazla bekler.', price: 75000, icon: 'truck' },
+      { id: 'lockpick', key: '1', name: 'Elektronik Maymuncuk', desc: 'Kilitli bir kapıyı saniyeler içinde, sessizce açar.', price: 95000, pack: 3, icon: 'key' },
+      { id: 'jammer', key: '2', name: 'Kamera Karıştırıcı', desc: 'Evdeki tüm kameraları 25 saniye boyunca kör eder.', price: 160000, pack: 2, icon: 'eye' },
+      { id: 'sleepgas', key: '3', name: 'Uyku Gazı Bombası', desc: 'Yakınındaki uyanık herkesi (köpek dahil) 25 saniye uyutur.', price: 240000, pack: 2, icon: 'zzz' },
+      { id: 'smoke', key: '4', name: 'Sis Bombası', desc: 'Kalın bir duman bulutu: içindeyken kimse seni göremez.', price: 120000, pack: 2, icon: 'cloud' },
+      { id: 'pistol', key: '6', name: 'Tabanca', desc: 'Çok pahalı. Havaya uyarı atışı: yakındaki herkes korkup kaçar, ama silah sesi 911\'i anında aratır.', price: 2500000, pack: 3, icon: 'gun' },
+      { id: 'emp', key: '5', name: 'EMP Cihazı', desc: 'Alarm sistemini, kameraları ve lazerleri tamamen devre dışı bırakır.', price: 380000, pack: 1, icon: 'bolt' },
+      { id: 'nightvision', perm: true, name: 'Gece Görüş Gözlüğü', desc: 'Kalıcı. El feneri olmadan da karanlıkta çok daha geniş görürsün.', price: 480000, icon: 'eye' },
+      { id: 'thermal', perm: true, name: 'Termal Tarayıcı', desc: 'Kalıcı. Duvarların ardındaki herkesi ve kasa anahtarını haritada gösterir.', price: 650000, icon: 'map' },
+      { id: 'bribe', perm: true, name: 'Şoföre Rüşvet', desc: 'Kalıcı. Şoför her soygunda 45 saniye fazla bekler.', price: 420000, icon: 'truck' },
     ],
+
+    /* ------------------------------------------------------------------
+     * REKLAM VE MAĞAZA (yalnızca Android / iOS uygulamasında)
+     * Ürün kimlikleri Play Console ve App Store Connect'te AYNEN açılmalı.
+     * price: mağaza fiyatı gelmezse gösterilecek yedek etiket.
+     * ---------------------------------------------------------------- */
+    MONETIZATION: {
+      // AdMob reklam birimleri. Şu an Google'ın TEST kimlikleri: gerçek
+      // kimlikleri girmeden mağazaya YÜKLEME (test reklamı gelir, gelir gelmez).
+      // Uygulama kimliği ayrıca AndroidManifest.xml ve ios/App/App/Info.plist içinde.
+      admob: {
+        android: {
+          banner: 'ca-app-pub-3940256099942544/9214589741',
+          interstitial: 'ca-app-pub-3940256099942544/1033173712',
+          rewarded: 'ca-app-pub-3940256099942544/5224354917',
+        },
+        ios: {
+          banner: 'ca-app-pub-3940256099942544/2435281174',
+          interstitial: 'ca-app-pub-3940256099942544/4411468910',
+          rewarded: 'ca-app-pub-3940256099942544/1712485313',
+        },
+        testing: true, // gerçek kimlikleri girince false yap
+      },
+      INTERSTITIAL_EVERY: 3, // her 3 soygunda bir tam ekran reklam
+      BANNER_SCENES: ['menu', 'levelselect', 'shop', 'darkweb', 'settings', 'howto', 'store'],
+      CASH_PACKS: [
+        { id: 'redcrime_cash_500k', money: 500000, price: '5 TL' },
+        { id: 'redcrime_cash_1m', money: 1000000, price: '10 TL' },
+        { id: 'redcrime_cash_2m', money: 2000000, price: '20 TL' },
+      ],
+      PREMIUM: { id: 'redcrime_premium', price: '49,99 TL' },
+      PREMIUM_TIME: 60, // her soygunda +60 sn
+      PREMIUM_BAG: 10, // +10 çuval yuvası
+      DAILY_BONUS: 50000, // premium günlük para ödülü
+    },
 
     /* ------------------------------------------------------------------
      * GELİŞTİRMELER (Dükkân)
@@ -536,7 +574,7 @@
         name: 'Kedi Pati Ayakkabı',
         desc: 'Ayak seslerini azaltır.',
         icon: 'shoe',
-        costs: [4000, 12000, 30000],
+        costs: [12000, 36000, 90000],
         effect: (l) => RC.L('-%{v} ayak sesi', { v: l * 18 }),
       },
       {
@@ -544,7 +582,7 @@
         name: 'Taktik El Feneri',
         desc: 'Daha uzun ve geniş ışık huzmesi.',
         icon: 'flashlight',
-        costs: [3000, 9000, 22000],
+        costs: [9000, 27000, 66000],
         effect: (l) => RC.L('+%{v} menzil', { v: l * 20 }),
       },
       {
@@ -552,15 +590,15 @@
         name: 'Büyük Çuval',
         desc: 'Cebe atılabilen küçük eşya kapasitesi.',
         icon: 'bag',
-        costs: [5000, 15000, 40000],
-        effect: (l) => RC.L('{v} küçük eşya', { v: 8 + l * 4 }),
+        costs: [15000, 45000, 120000],
+        effect: (l) => RC.L('{v} küçük eşya', { v: 14 + l * 6 }),
       },
       {
         id: 'strength',
         name: 'Protein Tozu',
         desc: 'Ağır eşyalar seni daha az yavaşlatır.',
         icon: 'muscle',
-        costs: [6000, 18000, 45000],
+        costs: [18000, 54000, 135000],
         effect: (l) => RC.L('-%{v} ağırlık cezası', { v: l * 15 }),
       },
       {
@@ -568,7 +606,7 @@
         name: 'Kasa Ustası Kursu',
         desc: 'Kasa açma mini oyununda daha geniş hedef.',
         icon: 'safe',
-        costs: [8000, 25000],
+        costs: [24000, 75000],
         effect: (l) => RC.L('+%{v} hedef bölge', { v: l * 35 }),
       },
       {
@@ -576,7 +614,7 @@
         name: 'Maraton Ciğeri',
         desc: 'Koşarken daha hızlısın.',
         icon: 'run',
-        costs: [5000, 16000],
+        costs: [15000, 48000],
         effect: (l) => RC.L('+%{v} koşu hızı', { v: l * 8 }),
       },
     ],

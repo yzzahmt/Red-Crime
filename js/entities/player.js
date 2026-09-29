@@ -57,7 +57,7 @@
 
     applyUpgrades() {
       const up = (id) => RC.Save.upgradeLevel(id);
-      this.bagCap = 8 + up('bag') * 4;
+      this.bagCap = 14 + up('bag') * 6 + RC.Premium.bag;
       this.shoeMul = 1 - up('shoes') * 0.18;
       this.strength = up('strength');
       this.runMul = 1 + up('lungs') * 0.08;
@@ -570,6 +570,24 @@
         it.release(this.vx * 0.5, -40, false);
       }
       scene.world.itemGrid.insert(it);
+    }
+
+    /** Çuvaldaki i. eşyayı ayağının dibine usulca bırak */
+    dropFromBag(i) {
+      const it = this.bag[i];
+      if (!it) return;
+      const scene = this.scene;
+      this.bag.splice(i, 1);
+      this.bagFullWarned = false;
+      it.x = this.cx - it.w / 2 + this.facing * 16;
+      it.y = this.bottom - it.h - 2;
+      if (!RC.Physics.spaceFree(it.x, it.y, it.w, it.h, scene.world.grid)) it.x = this.cx - it.w / 2;
+      it.release(0, 0, true);
+      scene.world.itemGrid.insert(it);
+      scene.activeItems.add(it);
+      RC.Audio.play('place', { vol: 0.4 });
+      scene.makeNoise(this.cx, this.cy, 0.03 * this.shoeMul, 'grab');
+      scene.toast(RC.L('Çuvaldan çıkarıldı: {n}', { n: it.name }), '#9aa3c7');
     }
 
     dropEverything(reason) {

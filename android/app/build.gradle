@@ -10,13 +10,13 @@ def keystoreProps = new Properties()
 if (keystorePropsFile.exists()) keystoreProps.load(new FileInputStream(keystorePropsFile))
 
 android {
-    namespace = "com.redcrime.game"
+    namespace = "com.yazify.redcrime"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.redcrime.game"
+        applicationId "com.yazify.redcrime"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode 3
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

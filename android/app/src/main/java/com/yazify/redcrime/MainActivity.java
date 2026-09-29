@@ -1,4 +1,4 @@
-package com.redcrime.game;
+package com.yazify.redcrime;
 
 import android.os.Bundle;
 import android.view.WindowManager;

@@ -132,7 +132,7 @@
       const sub = document.querySelector('#loader .sub');
       if (sub) sub.textContent = RC.L('Yükleniyor...');
       RC.Audio.play('uiSelect');
-      RC.Game.go('splash');
+      RC.Game.go(RC.Privacy.accepted ? 'splash' : 'privacy', { next: 'splash' });
     },
     update(dt) {
       this.t += dt;

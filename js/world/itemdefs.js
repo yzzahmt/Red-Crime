@@ -1878,7 +1878,8 @@
   const ALL = [...ITEMS, ...SAFE_LOOT, KEY_ITEM];
   for (const d of ALL) {
     d.fragile = d.fragile == null ? (d.mat === 'glass' || d.mat === 'ceramic' ? 0.9 : 0) : d.fragile;
-    d.small = !!d.small;
+    // Elde taşınabilen küçük, hafif eşyalar da çuvala girer
+    d.small = !!d.small || (Math.max(d.w, d.h) <= 34 && d.kg <= 2);
     d.w8 = d.w8 || 1;
     d.pal = d.pal || [['#888', '#555', '#fff']];
     d.drawFn = DRAW[d.draw] || DRAW.book;

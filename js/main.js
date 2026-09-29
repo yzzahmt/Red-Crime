@@ -47,11 +47,15 @@
           const skip = Number(q.get('t') || 0);
           for (let i = 0; i < skip * 60; i++) this.current.update(1 / 60);
         } else {
-          // İlk açılış: önce dil sorulur, seçilen dil kaydedilir
-          this.switchTo(RC.Save.settings.langChosen ? 'splash' : 'language', {});
+          // İlk açılış: önce dil, sonra gizlilik / KVKK onayı (kabul edilmeden oyuna geçilmez)
+          if (!RC.Save.settings.langChosen) this.switchTo('language', {});
+          else if (!RC.Privacy.accepted) this.switchTo('privacy', { next: 'splash' });
+          else this.switchTo('splash', {});
         }
         this.last = performance.now();
         requestAnimationFrame((ts) => this.loop(ts));
+        // Reklam + mağaza (yalnızca mobil uygulamada etkin)
+        if (RC.initMonetization) RC.initMonetization();
       };
       // Yazı tiplerini bekle (en fazla 2 sn)
       const fontsReady = document.fonts && document.fonts.load
@@ -66,7 +70,7 @@
       const sl = inset('--sal');
       const st = inset('--sat');
       const cw = window.innerWidth - sl - inset('--sar');
-      const ch = window.innerHeight - st - inset('--sab');
+      const ch = window.innerHeight - st - inset('--sab') - inset('--adb'); // --adb: alttaki reklam bandı
       this.canvas.style.left = sl + 'px';
       this.canvas.style.top = st + 'px';
       this.dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -116,6 +120,7 @@
       this.current = sc;
       this.currentName = name;
       RC.Input.consumeAll();
+      if (RC.Ads) RC.Ads.onScene(name);
       try {
         sc.enter(params || {});
       } catch (e) {

@@ -65,7 +65,7 @@
 
       this.resetRunState();
       this.time = 0;
-      this.timeLeft = C.heistTime(lvl) * this.diff.time + (RC.Save.hasPerm('bribe') ? 45 : 0);
+      this.timeLeft = C.heistTime(lvl) * this.diff.time + (RC.Save.hasPerm('bribe') ? 45 : 0) + RC.Premium.time;
       this.totalTime = this.timeLeft;
       this.loaded = [];
       this.loadedValue = 0;
@@ -875,6 +875,23 @@
         for (const g of C.DARKWEB) if (g.key && I.wasPressed('Digit' + g.key)) this.useGadget(g.id);
       }
 
+      // Çuvaldan eşya çıkarma: yuvaya tıkla / dokun, ya da G son eşyayı bırakır
+      if (this.state === 'play' && !p.hiddenInTruck && !this.bigMap) {
+        const slots = RC.HUD.bagSlotRects || [];
+        if (I.mouse.pressed && !this.drag) {
+          const hit = slots.find((r) => I.hover(r.x, r.y, r.w, r.h));
+          if (hit) {
+            p.dropFromBag(hit.i);
+            I.mouse.pressed = false;
+          } else {
+            const b = RC.HUD.bagRect;
+            if (b && I.hover(b.x, b.y, b.w, b.h)) I.mouse.pressed = false;
+          }
+        }
+        for (const r of slots) if (I.wasPressed('Touch.bag' + r.i)) p.dropFromBag(r.i);
+        if (I.wasPressed('KeyG') && p.bag.length) p.dropFromBag(p.bag.length - 1);
+      }
+
       // Oyuncu
       RC.DragLoot.updateHover(this);
       if (this.state !== 'escape' || this.leftBehind) {
@@ -1069,6 +1086,8 @@
       out.push({ x: W - 18 - 60, y: top, w: 60, h: 60, name: 'pause', draw: 'pause' });
       const mm = RC.Minimap.rect;
       if (mm) out.push({ x: mm.x, y: mm.y, w: mm.w, h: mm.h, name: 'map', hold: true });
+      // Çuval yuvaları: aradaki boşluk da dokunuşa dahil
+      if (!this.bigMap) for (const r of RC.HUD.bagSlotRects || []) out.push({ x: r.x - 2, y: r.y - 2, w: r.w + 4, h: r.h + 4, name: 'bag' + r.i });
       for (const g of RC.HUD.gadgetRects || []) out.push({ x: g.x, y: g.y, w: g.w, h: g.h, name: 'gadget' + g.key, code: 'Digit' + g.key });
       if (this.tutorial && this.tutorial.active && !this.tutorial.finished) {
         const pw = Math.min(620, W - 40);

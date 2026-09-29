@@ -904,7 +904,9 @@
 
     /* ------------------------ Anahtar ------------------------ */
     {
-      const candidates = W.surfaces.filter((s) => !s.furn.isSafe && s.room && s.room !== W.safeRoom && s.x1 - s.x0 > 30);
+      // Yalnızca evin içindeki yüzeyler (bahçe mobilyası / kulübe değil)
+      const inside = (s) => s.room && !s.room.outdoor && s.room.type !== 'garden' && s.x0 >= W.house.innerL && s.x1 <= W.house.innerR;
+      const candidates = W.surfaces.filter((s) => !s.furn.isSafe && inside(s) && s.room !== W.safeRoom && s.x1 - s.x0 > 30);
       const other = candidates.filter((s) => s.room.k !== W.safeRoom.k);
       const pickFrom = other.length && rng.chance(0.7) ? other : candidates;
       const s = rng.pick(pickFrom);
@@ -1034,20 +1036,42 @@
       camN--;
     }
 
-    // Lazerler
-    let lz = sec.lasers || 0;
     let tries = 0;
     const used = {};
     const laserRooms = W.rooms.filter((r) => r.type !== 'master');
+
+    // Hareket sensörleri (PIR): bölgede ayakta hareket edersen alarm.
+    // Lazer ve plakalardan önce yerleşir: bölgesine zıplama gerektiren tuzak
+    // konmaz (zıplarken çömelemezsin, sensör kesin öterdi).
+    W.motions = [];
+    let mn = sec.motion || 0;
+    while (mn > 0 && tries++ < 200) {
+      const r = rng.pick(laserRooms);
+      if (!r) break;
+      const f = W.floorByK[r.k];
+      if (W.motions.some((m) => m.room === r)) continue;
+      const side = rng.chance(0.5) ? 'L' : 'R';
+      const zw = Math.min(r.x1 - r.x0 - 80, rng.int(220, 340));
+      const zx = side === 'L' ? r.x0 + 30 : r.x1 - 30 - zw;
+      W.motions.push({ x: side === 'L' ? r.x0 + 26 : r.x1 - 26, y: r.y0 + 40, zx0: zx, zx1: zx + zw, k: r.k, floorY: f.y, room: r, acc: 0, disabled: false, blink: rng.float(0, 2) });
+      (used[r.k] || (used[r.k] = [])).push([zx - 20, zx + zw + 20]);
+      mn--;
+    }
+
+    // Lazerler. Alçak ışın zıplanarak geçilir: yürüyerek zıplama ~130 px
+    // yol alır, bu yüzden alçak lazerler dar tutulur. Yüksek ışının altından
+    // çömelerek geçilir, o yüzden daha geniş olabilir.
+    let lz = sec.lasers || 0;
+    tries = 0;
     while (lz > 0 && tries++ < 300 && laserRooms.length) {
       const r = rng.pick(laserRooms);
       const f = W.floorByK[r.k];
       const taken = used[r.k] || (used[r.k] = []);
       const free = subtractRanges([[r.x0 + 40, r.x1 - 40]], [...f.blocked, ...taken]);
-      const width = rng.int(140, 230);
+      const high = rng.chance(0.5);
+      const width = high ? rng.int(140, 230) : rng.int(50, 85);
       const x = findSpot(free, width, rng, 10, true);
       if (x == null) continue;
-      const high = rng.chance(0.5);
       W.lasers.push({
         x0: x,
         x1: x + width,
@@ -1063,25 +1087,11 @@
         phase: rng.float(0, 3),
         disabled: false,
       });
-      taken.push([x - 30, x + width + 30]);
+      // Arkasından gelen tuzağa inmeden önce toparlanacak boşluk
+      taken.push([x - 90, x + width + 90]);
       lz--;
     }
 
-    // Hareket sensörleri (PIR): bölgede ayakta hareket edersen alarm
-    W.motions = [];
-    let mn = sec.motion || 0;
-    tries = 0;
-    while (mn > 0 && tries++ < 200) {
-      const r = rng.pick(laserRooms);
-      if (!r) break;
-      const f = W.floorByK[r.k];
-      if (W.motions.some((m) => m.room === r)) continue;
-      const side = rng.chance(0.5) ? 'L' : 'R';
-      const zw = Math.min(r.x1 - r.x0 - 80, rng.int(220, 340));
-      const zx = side === 'L' ? r.x0 + 30 : r.x1 - 30 - zw;
-      W.motions.push({ x: side === 'L' ? r.x0 + 26 : r.x1 - 26, y: r.y0 + 40, zx0: zx, zx1: zx + zw, k: r.k, floorY: f.y, room: r, acc: 0, disabled: false, blink: rng.float(0, 2) });
-      mn--;
-    }
     // Basınç plakaları: üstüne basarsan alarm (zıplayarak geç)
     W.plates = [];
     let pn = sec.plates || 0;
@@ -1092,11 +1102,11 @@
       const f = W.floorByK[r.k];
       const taken = used[r.k] || (used[r.k] = []);
       const free = subtractRanges([[r.x0 + 40, r.x1 - 40]], [...f.blocked, ...taken]);
-      const pw = rng.int(70, 110);
+      const pw = rng.int(50, 80);
       const x = findSpot(free, pw, rng, 10, true);
       if (x == null) continue;
       W.plates.push({ x0: x, x1: x + pw, y: f.y, k: r.k, room: r, disabled: false, pressT: 0 });
-      taken.push([x - 40, x + pw + 40]);
+      taken.push([x - 90, x + pw + 90]);
       pn--;
     }
     // Tarayan lazerler: oda boyunca gidip gelen dikey ışın
@@ -1106,11 +1116,13 @@
     while (sn > 0 && tries++ < 200) {
       const r = rng.pick(laserRooms);
       if (!r || W.sweepers.some((q) => q.room === r)) continue;
+      // Altından çömelerek geçilen ışın; zıplama gerektiren tuzakla aynı odada olmaz
+      if (W.lasers.some((l) => l.room === r && !l.high) || W.plates.some((pl) => pl.room === r)) continue;
       const f = W.floorByK[r.k];
       const x0 = r.x0 + 50;
       const x1 = r.x1 - 50;
       if (x1 - x0 < 200) continue;
-      W.sweepers.push({ x0, x1, x: rng.float(x0, x1), dir: rng.chance(0.5) ? 1 : -1, speed: rng.float(70, 120), top: f.y - 150, y: f.y, k: r.k, room: r, disabled: false });
+      W.sweepers.push({ x0, x1, x: rng.float(x0, x1), dir: rng.chance(0.5) ? 1 : -1, speed: rng.float(70, 120), top: f.y - 150, y: f.y - 38, floorY: f.y, k: r.k, room: r, disabled: false });
       sn--;
     }
 

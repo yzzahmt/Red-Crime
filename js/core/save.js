@@ -25,6 +25,8 @@
         skipIntro: false,
         lang: 'tr', // tr | en
         langChosen: false, // ilk açılışta dil seçim ekranı gösterildi mi
+        privacyAccepted: '', // kabul edilen gizlilik / KVKK metni sürümü (RC.Privacy.VERSION)
+        privacyAcceptedAt: '', // kabul zamanı (ISO)
       },
       progress: {
         unlocked: 1,
@@ -44,6 +46,9 @@
         discountCode: null,
         gadgets: { lockpick: 0, jammer: 0, sleepgas: 0, smoke: 0, emp: 0, pistol: 0 },
         perm: { nightvision: false, thermal: false, bribe: false },
+        premium: false, // mağazadan premium alındı
+        lastDaily: '', // premium günlük ödülün son alındığı gün (YYYY-AA-GG)
+        grantedTx: [], // teslim edilmiş para paketi işlemleri (çift teslim olmasın)
       },
     };
   }
@@ -83,8 +88,13 @@
 
     reset() {
       const keepSettings = this.data.settings;
+      // Gerçek parayla alınanlar sıfırlamada kaybolmaz: premium ve teslim kayıtları
+      const old = this.data.progress;
       this.data = defaults();
       this.data.settings = keepSettings;
+      this.data.progress.premium = !!old.premium;
+      this.data.progress.lastDaily = old.lastDaily || '';
+      this.data.progress.grantedTx = (old.grantedTx || []).slice();
       this.save();
     },
 

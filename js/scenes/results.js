@@ -22,6 +22,9 @@
       this.celebrated = false;
       this.counter = 0;
       this.starsShown = 0;
+      this.doubled = false;
+      this.watching = false;
+      this.leaving = false;
       this.particles = new RC.Particles(800);
       this.res = RC.Save.recordHeist(p.level, p.value, p.stars, p.items.length, p.stats.safeOpened);
       this.sorted = p.items.slice().sort((a, b) => b.value - a.value);
@@ -51,8 +54,17 @@
         return;
       }
       const btns = [];
-      btns.push(new UI.Button({ x: w / 2 - 470, y, w: 290, h: 56, label: 'BÖLÜM SEÇ', icon: 'map', onClick: () => RC.Game.go('levelselect', { select: this.p.level }) }));
-      btns.push(new UI.Button({ x: w / 2 - 145, y, w: 290, h: 56, label: 'TEKRAR OYNA', icon: 'retry', onClick: () => RC.Game.go('briefing', { level: this.p.level }) }));
+      this.btnDouble = null;
+      // Sonuç ekranından çıkarken ara sıra tam ekran reklam (premium'da yok)
+      const leave = (fn) => () => {
+        if (this.leaving) return;
+        this.leaving = true;
+        // Az önce ödüllü reklam izlediyse üstüne bir de tam ekran reklam gösterme
+        if (this.doubled) fn();
+        else RC.Ads.maybeInterstitial().then(fn, fn);
+      };
+      btns.push(new UI.Button({ x: w / 2 - 470, y, w: 290, h: 56, label: 'BÖLÜM SEÇ', icon: 'map', onClick: leave(() => RC.Game.go('levelselect', { select: this.p.level })) }));
+      btns.push(new UI.Button({ x: w / 2 - 145, y, w: 290, h: 56, label: 'TEKRAR OYNA', icon: 'retry', onClick: leave(() => RC.Game.go('briefing', { level: this.p.level })) }));
       btns.push(
         new UI.Button({
           x: w / 2 + 180,
@@ -62,11 +74,42 @@
           label: hasNext ? 'SONRAKİ BÖLÜM' : 'ANA MENÜ',
           icon: hasNext ? 'play' : 'home',
           primary: true,
-          onClick: () => (hasNext ? RC.Game.go('briefing', { level: this.p.level + 1 }) : RC.Game.go('menu')),
+          onClick: leave(() => (hasNext ? RC.Game.go('briefing', { level: this.p.level + 1 }) : RC.Game.go('menu'))),
         })
       );
+      // Ödüllü reklam: izle, bu soygunun parasını ikiye katla (bir kez)
+      if (this.p.value > 0 && !this.doubled && RC.Ads.canReward()) {
+        this.btnDouble = new UI.Button({
+          x: w / 2 - 170,
+          y: y - 66,
+          w: 340,
+          h: 54,
+          label: RC.L('2X PARA · REKLAM İZLE'),
+          sub: '+' + U.formatMoney(this.p.value),
+          icon: 'play',
+          fontSize: 17,
+          onClick: () => this.watchDouble(),
+        });
+        btns.push(this.btnDouble);
+      }
       this.menu = new UI.Menu(btns);
       this.menu.focus = 2;
+    },
+    async watchDouble() {
+      if (this.doubled || this.watching) return;
+      this.watching = true;
+      const ok = await RC.Ads.showRewarded();
+      this.watching = false;
+      if (!ok) {
+        RC.Audio.play('uiError');
+        return;
+      }
+      this.doubled = true;
+      RC.Save.progress.wallet += this.p.value;
+      RC.Save.save();
+      RC.Audio.play('bigcash');
+      this.particles.confetti(RC.Game.W / 2, 200, 80, 400);
+      this.build();
     },
     update(dt) {
       this.t += dt;
@@ -97,6 +140,8 @@
           this.particles.confetti(RC.Game.W / 2, 100, 150, RC.Game.W);
         }
       }
+      // Ödüllü reklam sonradan yüklendiyse düğmeyi ekle
+      if (!this.btnDouble && !this.doubled && this.p.value > 0 && this.menu && this.menu.widgets.length === 3 && RC.Ads.canReward()) this.build();
       if (I.anyPressed && !this.countDone) {
         this.counter = p.value;
       }
@@ -128,6 +173,7 @@
       }
       // Para
       D.text(ctx, U.formatMoney(this.counter), w / 2, 238, { size: 52, font: C.FONT_TITLE, align: 'center', color: C.COLORS.gold, stroke: '#000', strokeW: 6 });
+      if (this.doubled) D.text(ctx, RC.L('2X PARA!'), w / 2 - 230, 214, { size: 18, font: C.FONT_TITLE, align: 'center', color: C.COLORS.gold });
       if (this.res.newBest && this.countDone) {
         const a = 0.7 + Math.sin(t * 6) * 0.3;
         D.text(ctx, 'YENİ REKOR!', w / 2 + 230, 214, { size: 18, font: C.FONT_TITLE, align: 'center', color: '#3ddc84', alpha: a });

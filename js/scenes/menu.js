@@ -122,6 +122,10 @@
       this.t = 0;
       RC.Audio.playMusic('menu');
       this.build();
+      // Premium günlük hediye
+      const bonus = RC.IAP ? RC.IAP.claimDaily() : 0;
+      this.notice = bonus ? { text: RC.L('Premium günlük hediye: +{m}', { m: U.formatMoney(bonus) }), t: 5 } : null;
+      if (bonus) RC.Audio.play('bigcash');
     },
     onResize() {
       this.build();
@@ -131,21 +135,23 @@
       const h = RC.Game.H;
       const bw = 360;
       const x = w / 2 - bw / 2;
-      let y = h * 0.47;
+      let y = h * 0.44;
       const mk = (label, icon, fn, o = {}) => {
-        const b = new UI.Button({ x, y, w: bw, h: 58, label, icon, onClick: fn, ...o });
-        y += 70;
+        const b = new UI.Button({ x, y, w: bw, h: 52, label, icon, onClick: fn, ...o });
+        y += 62;
         return b;
       };
       const focus = this.menu ? this.menu.focus : 0;
       this.menu = new UI.Menu([
         mk('OYUNA BAŞLA', 'play', () => RC.Game.go('levelselect'), { primary: true, fontSize: 22 }),
+        // Mağaza yalnızca Android / iOS'ta (Steam / tarayıcıda gizli)
+        ...(RC.IAP && RC.IAP.supported ? [mk('MAĞAZA', 'money', () => RC.Game.go('store', { back: 'menu' }))] : []),
         mk('AYARLAR', 'gear', () => RC.Game.go('settings', { back: 'menu' })),
         mk('NASIL OYNANIR', 'info', () => RC.Game.go('howto')),
         mk(RC.I18N.lang === 'en' ? 'LANGUAGE: ENGLISH' : 'DİL: TÜRKÇE', 'globe', () => {
           RC.setLang(RC.I18N.lang === 'en' ? 'tr' : 'en');
           this.build();
-          this.menu.focus = 3;
+          this.menu.focus = RC.IAP && RC.IAP.supported ? 4 : 3;
         }),
         ...(RC.Platform.canQuit ? [mk('ÇIKIŞ', 'cross', () => RC.Platform.quit())] : []),
       ]);
@@ -154,6 +160,7 @@
     update(dt) {
       this.t += dt;
       MenuBG.update(dt);
+      if (this.notice && (this.notice.t -= dt) <= 0) this.notice = null;
       this.menu.update(dt);
     },
     render(ctx) {
@@ -165,6 +172,7 @@
       RC.drawLogo(ctx, w / 2, h * 0.26, Math.min(120, w * 0.095), t, { appear: 0.4 + appear * 0.6, slash: appear * 1.5, glitch: Math.random() < 0.02 ? 1 : 0 });
       D.text(ctx, 'SESSİZ  ·  HIZLI  ·  TEMİZ', w / 2, h * 0.26 + 88, { size: 18, align: 'center', color: '#b8c0e0', weight: 'bold', alpha: appear });
       this.menu.draw(ctx, t);
+      if (this.notice) D.text(ctx, this.notice.text, w / 2, h * 0.44 - 18, { size: 18, weight: 'bold', align: 'center', color: C.COLORS.gold, alpha: Math.min(1, this.notice.t), stroke: 'rgba(0,0,0,0.8)', strokeW: 4 });
       // Alt bilgi
       const p = RC.Save.progress;
       D.panel(ctx, 20, h - 64, 280, 46, { r: 10 });
@@ -303,6 +311,7 @@
       this.resetBtn = resetBtn;
       items.push(resetBtn);
       items.push(new UI.Toggle({ x: x1, y: by + 64, w: colW, h: 52, label: 'Açılışı Atla', get: () => s().skipIntro, set: set('skipIntro') }));
+      items.push(new UI.Button({ x: x1, y: by + 64, w: colW, h: 52, label: 'GİZLİLİK / KVKK', icon: 'lock', fontSize: 17, onClick: () => RC.Game.go('privacy', { review: true, back: 'settings', backParams: { back: this.back, backParams: this.backParams } }) }));
       items.push(new UI.Button({ x: x2, y: by + 64, w: colW, h: 52, label: 'GERİ', icon: 'back', back: true, primary: true, onClick: () => this.goBack() }));
       this.menu = new UI.Menu(items);
     },
@@ -444,7 +453,7 @@
         });
       } else {
         const lines = [
-          ['bag', 'Küçük eşyalar (yüzük, saat, para...) doğrudan ÇUVALA girer. Çuval dolunca kamyona boşalt.'],
+          ['bag', 'Küçük eşyalar doğrudan ÇUVALA girer. Çuvaldaki eşyaya tıkla (G: sonuncusu) ve çıkar. Dolunca kamyona boşalt.'],
           ['hand', 'Büyük eşyaları başının üstünde taşırsın. Ağır eşyalar seni yavaşlatır ve daha sesli yürütür.'],
           ['truck', 'Sadece KAMYONA yüklenen ganimet sayılır! Kamyonun arkasında SPACE ile yükle (dokunmatik: dokun).'],
           ['star', 'Nadirlik: Sıradan · Nadir (mavi) · Epik (mor) · Efsanevi (altın). Parlayan eşyaları kaçırma.'],
