@@ -1,7 +1,7 @@
 {
   "name": "red-crime",
   "productName": "Red Crime",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "2D stealth heist game",
   "private": true,
   "main": "desktop/main.js",

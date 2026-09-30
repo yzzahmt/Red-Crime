@@ -1,5 +1,6 @@
 package com.yazify.redcrime;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.view.WindowManager;
 import androidx.core.view.WindowCompat;
@@ -14,6 +15,18 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         // Oyun sırasında ekran kararmasın
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // Yatay modda kamera deliği / çentik tarafında siyah şerit kalmasın
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        }
+        hideSystemBars();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
         hideSystemBars();
     }
 

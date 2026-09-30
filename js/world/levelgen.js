@@ -1300,7 +1300,8 @@
       const def = FD()[t];
       const x = findSpot(freeG, def.w + 40, rng, 40, true);
       if (x == null) continue;
-      const inst = W.makeFurn(t, x + 20, 0, gardenRoom, pal);
+      const opts = t === 'doghouse' && cfg.dogName ? { state: { label: cfg.dogName.toLocaleUpperCase('tr-TR') } } : undefined;
+      const inst = W.makeFurn(t, x + 20, 0, gardenRoom, pal, opts);
       if (t === 'shed') {
         W.shed = inst;
         // Kulübe içi raflar
@@ -1308,7 +1309,7 @@
         W.makeFurn('workbench', x + 200, 0, { ...gardenRoom, type: 'workshop' }, pal);
       }
       if (t === 'doghouse') {
-        W.dog = { x: x + 20 + def.w + 30, homeX: x + 20 + def.w / 2, y: 0, range: [g0 + 120, g1 - 60] };
+        W.dog = { x: x + 20 + def.w + 30, homeX: x + 20 + def.w / 2, y: 0, range: [g0 + 120, g1 - 60], smart: cfg.dog === 'smart' };
       }
     }
 

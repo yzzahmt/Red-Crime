@@ -30,10 +30,20 @@
       this.ctx = this.canvas.getContext('2d');
       RC.Save.load();
       RC.Input.init(this.canvas);
-      this.resize();
+      // Sistem çubukları gizlenince / döndürünce boyut birkaç kare gecikmeli değişir
+      const settle = () => {
+        this.resize();
+        setTimeout(() => this.resize(), 250);
+        setTimeout(() => this.resize(), 800);
+      };
+      settle();
       window.addEventListener('resize', () => this.resize());
+      window.addEventListener('orientationchange', settle);
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', () => this.resize());
+      document.addEventListener('fullscreenchange', settle);
       document.addEventListener('visibilitychange', () => {
         if (document.hidden && this.currentName === 'heist' && RC.Scenes.heist.state === 'play') RC.Scenes.heist.openPause();
+        if (!document.hidden) settle();
       });
       const start = () => {
         const loader = document.getElementById('loader');
@@ -64,16 +74,37 @@
       Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2000))]).then(start, start);
     },
 
+    /** Çentik güvenli bölgesi (px). Yalnızca iOS'ta uygulanır: Android'de kamera deliği küçüktür, oyun tam ekran kalır. */
+    safeInsets() {
+      const ios = (RC.Platform && RC.Platform.os === 'ios') || /iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (!ios) return { l: 0, r: 0, t: 0, b: 0 };
+      // env() özel değişkende çözülmeyebilir: gerçek bir öğenin dolgusundan ölç
+      if (!this.insetProbe) {
+        const el = document.createElement('div');
+        el.style.cssText =
+          'position:fixed;visibility:hidden;pointer-events:none;left:0;top:0;width:0;height:0;' +
+          'padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
+        document.body.appendChild(el);
+        this.insetProbe = el;
+      }
+      const cs = getComputedStyle(this.insetProbe);
+      return { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, t: parseFloat(cs.paddingTop) || 0, b: parseFloat(cs.paddingBottom) || 0 };
+    },
+
     resize() {
-      const css = getComputedStyle(document.documentElement);
-      const inset = (k) => parseFloat(css.getPropertyValue(k)) || 0;
-      const sl = inset('--sal');
-      const st = inset('--sat');
-      const cw = window.innerWidth - sl - inset('--sar');
-      const ch = window.innerHeight - st - inset('--sab') - inset('--adb'); // --adb: alttaki reklam bandı
+      const adb = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--adb')) || 0; // alttaki reklam bandı
+      const si = this.safeInsets();
+      const sl = si.l;
+      const st = si.t;
+      const cw = Math.max(1, window.innerWidth - sl - si.r);
+      const ch = Math.max(1, window.innerHeight - st - si.b - adb);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const key = [sl, st, cw, ch, dpr].join();
+      if (key === this.sizeKey) return;
+      this.sizeKey = key;
       this.canvas.style.left = sl + 'px';
       this.canvas.style.top = st + 'px';
-      this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this.dpr = dpr;
       this.canvas.width = Math.floor(cw * this.dpr);
       this.canvas.height = Math.floor(ch * this.dpr);
       this.canvas.style.width = cw + 'px';

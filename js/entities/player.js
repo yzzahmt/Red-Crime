@@ -480,7 +480,7 @@
             scene.escape();
           } else {
             this.escapeConfirmT = 2.5;
-            scene.toast('Kaçmak için tekrar E bas! (Kamyondaki ganimetle)', '#ffc83d');
+            scene.toast(RC.T('Kaçmak için tekrar E bas! (Kamyondaki ganimetle)', 'Kaçmak için tekrar dokun! (Kamyondaki ganimetle)'), '#ffc83d');
           }
         }
       }

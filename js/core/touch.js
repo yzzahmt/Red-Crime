@@ -260,15 +260,40 @@
           if (tr.down) this.downRecentT = this.now();
           for (const k of ['left', 'right', 'run', 'up', 'down']) this.hold(k, false);
         }
-        if (isTap && !tr.long) this.action('touchTap', 'grab');
+        if (isTap && !tr.long) this.action('touchTap', 'grab', this.toLogical(t));
       }
       if (!this.touches.size) this.primary = null;
+      if (!cancel) this.enterFullscreen();
+    },
+
+    /** Tarayıcıda: ilk dokunuşta tam ekran + yatay kilit (uygulamada zaten tam ekran) */
+    enterFullscreen() {
+      if ((RC.Platform && (RC.Platform.native || RC.Platform.desktop)) || document.fullscreenElement) return;
+      if (this.fsTried && this.now() - this.fsTried < 3) return;
+      this.fsTried = this.now();
+      const el = document.documentElement;
+      const req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (!req) return;
+      try {
+        const p = req.call(el, { navigationUI: 'hide' });
+        const lock = () => {
+          try {
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+          } catch (e) {
+            /* desteklenmiyor */
+          }
+        };
+        if (p && p.then) p.then(lock, () => {});
+        else lock();
+      } catch (e) {
+        /* desteklenmiyor (ör. iPhone Safari) */
+      }
     },
 
     /** Sahneden bağlama uygun eylemi isteyip bir karelik bas */
-    action(hook, fallback) {
+    action(hook, fallback, pos) {
       const sc = this.scene();
-      const name = (sc && sc[hook] && sc[hook]()) || fallback;
+      const name = (sc && sc[hook] && sc[hook](pos)) || fallback;
       if (name) this.pulse('Touch.' + name);
     },
 

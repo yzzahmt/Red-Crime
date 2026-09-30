@@ -20,8 +20,8 @@
     { keys: ['F'], text: 'El fenerini kapat, sonra tekrar aç.', touch: 'Ekrana basılı tut: el fenerini kapat, sonra tekrar aç.', done: (s) => s.flashToggles >= 2 },
     { keys: ['SPACE'], text: 'Eve gir ve bir eşyanın yanında SPACE ile al. Küçük eşyalar çuvala girer.', touch: 'Eve gir ve bir eşyanın yanında ekrana dokun. Küçük eşyalar çuvala girer.', done: (s) => s.pickups > 0, indoor: true },
     { keys: ['SPACE'], text: 'Ganimeti kamyonun arkasına götür ve SPACE ile yükle. Sadece kamyondakiler sayılır.', touch: 'Ganimeti kamyonun arkasına götür ve dokunarak yükle. Sadece kamyondakiler sayılır.', done: (s) => s.loaded > 0, indoor: true },
-    { keys: ['E'], text: "Kapalı bir kapının önünde E'ye basarak aç. Kilitliyse maymuncukla açarsın.", touch: 'Kapalı bir kapının önünde ekrana dokunarak aç. Kilitliyse maymuncukla açarsın.', done: (s) => s.doors > 0, indoor: true },
-    { keys: ['S'], text: 'Saklan: perde ya da dolap önünde hareketsiz dur, kanepe ya da yatak arkasında çömel.', done: (s) => s.hides > 0, indoor: true },
+    { keys: ['E'], text: "Kapalı bir kapının önünde E'ye basarak aç. Kilitliyse maymuncukla açarsın.", touch: 'Kapalı bir kapıya dokunarak aç. Kilitliyse maymuncukla açarsın.', done: (s) => s.doors > 0, indoor: true },
+    { keys: ['S'], text: 'Saklan: perde ya da dolap önünde hareketsiz dur, kanepe ya da yatak arkasında çömel.', touch: 'Saklan: perde ya da dolap önünde hareketsiz dur, kanepe ya da yatak arkasında aşağı kaydırıp çömel.', done: (s) => s.hides > 0, indoor: true },
   ];
 
   class Tutorial {

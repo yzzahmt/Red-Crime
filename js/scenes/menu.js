@@ -401,6 +401,7 @@
           [['▼ KAYDIR', '▲ KAYDIR'], 'Rafın / platformun üstünden aşağı in'],
           [['UZUN KAYDIR'], 'Koş (daha hızlı ama gürültülü)'],
           [['DOKUN'], 'Al / çuvala at / bırak / yükle / aç / kaç'],
+          [['DOKUN'], 'Kapıya / kasaya dokun: aç'],
           [['▼ KAYDIR', 'DOKUN'], 'Çömel, ikinci parmakla dokun: SESSİZCE koy'],
           [['BASILI TUT'], 'Eşya elindeyken: fırlat'],
           [['BASILI TUT'], 'Elin boşken: el fenerini aç / kapat'],
@@ -453,11 +454,11 @@
         });
       } else {
         const lines = [
-          ['bag', 'Küçük eşyalar doğrudan ÇUVALA girer. Çuvaldaki eşyaya tıkla (G: sonuncusu) ve çıkar. Dolunca kamyona boşalt.'],
+          ['bag', RC.T('Küçük eşyalar doğrudan ÇUVALA girer. Çuvaldaki eşyaya tıkla (G: sonuncusu) ve çıkar. Dolunca kamyona boşalt.', 'Küçük eşyalar doğrudan ÇUVALA girer. Çuvaldaki eşyaya dokunarak çıkar. Dolunca kamyona boşalt.')],
           ['hand', 'Büyük eşyaları başının üstünde taşırsın. Ağır eşyalar seni yavaşlatır ve daha sesli yürütür.'],
-          ['truck', 'Sadece KAMYONA yüklenen ganimet sayılır! Kamyonun arkasında SPACE ile yükle (dokunmatik: dokun).'],
+          ['truck', RC.T('Sadece KAMYONA yüklenen ganimet sayılır! Kamyonun arkasında SPACE ile yükle.', 'Sadece KAMYONA yüklenen ganimet sayılır! Kamyonun arkasında ekrana dokunarak yükle.')],
           ['star', 'Nadirlik: Sıradan · Nadir (mavi) · Epik (mor) · Efsanevi (altın). Parlayan eşyaları kaçırma.'],
-          ['safe', 'Her evde bir KASA var. Anahtarını bul, kasanın önünde E\'ye bas ve kilidi aç.'],
+          ['safe', RC.T('Her evde bir KASA var. Anahtarını bul, kasanın önünde E\'ye bas ve şifre kadranını çöz.', 'Her evde bir KASA var. Anahtarını bul, kasaya dokun ve şifre kadranını çöz.')],
           ['fragile', 'Vazo, cam, ayna, porselen KIRILIR. Kırılan eşya hem değer kaybı hem büyük gürültü demek.'],
           ['shop', 'Kazandığın parayla dükkândan sessiz ayakkabı, büyük çuval, güçlü fener gibi geliştirmeler al.'],
         ];

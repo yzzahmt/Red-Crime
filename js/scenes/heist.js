@@ -86,7 +86,6 @@
       this.stateT = 0;
       this.inputLocked = false;
       this.bigMap = false;
-      this.minigame = null;
       this.truckAnim = { door: 0, x: W.truck.x, drive: 0 };
       this.stats = { broken: 0, brokenValue: 0, woken: 0, spotted: 0, safeOpened: false, keyFound: false, thrown: 0 };
       this.hintT = 20;
@@ -172,7 +171,6 @@
       this.particles = null;
       this.tutorial = null;
       this.mg = null;
-      this.minigame = null;
       this.pauseMenu = null;
       this.drag = null;
       this.heat = null;
@@ -379,74 +377,7 @@
 
     /* ------------------------ Kasa ------------------------ */
     startSafeMinigame() {
-      const lvl = RC.Save.upgradeLevel('safecracker');
-      this.minigame = {
-        round: 0,
-        rounds: 3 + (this.cfg.kind === 'bank' ? 2 : 0) + (this.stethoscope ? 1 : 0),
-        angle: 0,
-        dir: 1,
-        speed: 2.4 + this.levelIndex * 0.25,
-        zoneA: U.rand(0.5, 5.5),
-        zoneW: Math.max(0.22, (0.55 + lvl * 0.19) * (1 - Math.min(this.levelIndex, 10) * 0.05)) * (this.drill ? 1.5 : this.stethoscope ? 0.85 : 1),
-        t: 0,
-        flash: 0,
-        flashCol: '#3ddc84',
-        clickAcc: 0,
-      };
-      this.prevState = this.state;
-      this.state = 'minigame';
-      this.inputLocked = true;
-      I.consumeAll();
-    },
-
-    updateMinigame(dt) {
-      const m = this.minigame;
-      m.t += dt;
-      m.flash = Math.max(0, m.flash - dt * 2);
-      m.angle += m.dir * m.speed * dt;
-      m.clickAcc += m.speed * dt;
-      if (m.clickAcc > 0.26) {
-        m.clickAcc = 0;
-        RC.Audio.play('safeClick', { vol: 0.5, pitch: 0.9 + Math.random() * 0.2 });
-      }
-      if (I.actPressed('back')) {
-        this.state = 'play';
-        this.inputLocked = false;
-        this.minigame = null;
-        I.consumeAll();
-        return;
-      }
-      if (I.actPressed('grab') || I.wasPressed('KeyE') || I.mouse.pressed) {
-        const diff = Math.abs(U.angleDiff(m.angle, m.zoneA));
-        if (diff < m.zoneW / 2) {
-          m.round++;
-          m.flash = 1;
-          m.flashCol = '#3ddc84';
-          RC.Audio.play('safeGood', { vol: 0.9 });
-          if (this.drill) {
-            const s0 = this.world.safe;
-            RC.Audio.play('metal', { vol: 0.8, intensity: 0.8 });
-            this.particles.sparks(s0.x + s0.w / 2, s0.y + s0.h / 2, 16, '#ffb347', 260);
-            this.makeNoise(s0.x + s0.w / 2, s0.y + 20, 0.35, 'drill');
-          }
-          if (m.round >= m.rounds) {
-            this.openSafe();
-            return;
-          }
-          m.dir *= -1;
-          m.speed *= 1.25;
-          m.zoneW *= 0.85;
-          m.zoneA = m.angle + U.rand(1.5, 4.5) * (Math.random() < 0.5 ? 1 : -1);
-        } else {
-          m.flash = 1;
-          m.flashCol = '#ff3043';
-          RC.Audio.play('safeBad', { vol: 0.9 });
-          const s = this.world.safe;
-          this.makeNoise(s.x + s.w / 2, s.y + 20, this.stethoscope ? 0.25 : 0.55, 'safe');
-          this.camera.shake(0.2);
-          m.round = Math.max(0, m.round - 1);
-        }
-      }
+      this.startMinigame(new RC.Minigames.SafeGame(this, this.world.safe), 'safe', this.world.safe);
     },
 
     openSafe() {
@@ -455,7 +386,6 @@
       s.state.open = true;
       this.state = 'play';
       this.inputLocked = false;
-      this.minigame = null;
       this.stats.safeOpened = true;
       RC.Audio.play('safeOpen', { vol: 1 });
       this.toast('KASA AÇILDI! İçindekileri topla!', C.COLORS.gold);
@@ -576,7 +506,7 @@
       const L = RC.L;
       // Alarm paneli
       const pn = W.panel;
-      if (pn && !pn.disabled && Math.abs(p.cx - pn.x) < 50 && p.bottom > -20 && p.bottom < 10) {
+      if (this.panelNear()) {
         if (this.alarm) {
           this.toast(L('Alarm çalıyor, panel kilitlendi!'), '#ff3043');
           return true;
@@ -612,6 +542,12 @@
     },
 
     /** Oyuncunun önündeki açılmamış çekmece/dolap */
+    panelNear() {
+      const p = this.player;
+      const pn = this.world.panel;
+      return !!(pn && !pn.disabled && Math.abs(p.cx - pn.x) < 50 && p.bottom > -20 && p.bottom < 10);
+    },
+
     containerNear() {
       const p = this.player;
       let best = null;
@@ -676,6 +612,8 @@
           this.stats.locks = (this.stats.locks || 0) + 1;
         } else if (type === 'hack') {
           RC.Security.disable(this, false);
+        } else if (type === 'safe') {
+          this.openSafe();
         }
       } else if (res === 'fail' && type === 'lockpick') {
         this.toast(RC.L('Matkap uçları bitti. Kilit kırılamadı.'), '#ff3043');
@@ -822,11 +760,11 @@
       const p = this.player;
       const W = this.world;
 
-      if (I.actPressed('pause') && this.state !== 'minigame' && this.state !== 'mg' && this.state !== 'caught' && this.state !== 'escape') {
+      if (I.actPressed('pause') && this.state !== 'mg' && this.state !== 'caught' && this.state !== 'escape') {
         this.openPause();
         return;
       }
-      this.bigMap = I.act('map') && this.state !== 'minigame' && this.state !== 'mg';
+      this.bigMap = I.act('map') && this.state !== 'mg';
 
       // Giriş bandı
       if (this.state === 'intro') {
@@ -837,7 +775,7 @@
       // Süre
       if (this.tutorial) this.tutorial.update(rawDt);
       const tutPause = this.tutorial && this.tutorial.timerPaused;
-      if ((this.state === 'play' || this.state === 'minigame' || this.state === 'mg' || this.state === 'intro') && !tutPause) {
+      if ((this.state === 'play' || this.state === 'mg' || this.state === 'intro') && !tutPause) {
         this.timeLeft -= dt;
         if (this.timeLeft <= 30 && !this.warned30) {
           this.warned30 = true;
@@ -866,7 +804,6 @@
         }
       }
 
-      if (this.state === 'minigame') this.updateMinigame(rawDt);
       if (this.state === 'mg' && this.mg) this.updateMg(rawDt);
       this.updatePlan(dt);
       RC.Doors.update(this, dt);
@@ -945,6 +882,7 @@
         danger = Math.max(danger, d);
       }
       if (this.dog && this.dog.state === 'chase') danger = Math.max(danger, 0.8);
+      else if (this.dog && (this.dog.state === 'track' || this.dog.state === 'guard')) danger = Math.max(danger, 0.5);
       if (this.alarm) danger = Math.max(danger, 0.9);
       for (const c of this.world.cameras) danger = Math.max(danger, c.detect * 0.8);
       this.dangerLevel = U.damp(this.dangerLevel, danger, 4, dt);
@@ -1016,7 +954,8 @@
         if (this.hintT <= 0) {
           this.hintT = 40;
           this.hintIdx = (this.hintIdx + 1) % C.HINTS.length;
-          this.toast(RC.L('İpucu: {h}', { h: RC.L(C.HINTS[this.hintIdx]) }), '#8fb7ff');
+          const hint = C.HINTS[this.hintIdx];
+          this.toast(RC.L('İpucu: {h}', { h: RC.L(RC.T(hint, C.HINTS_TOUCH[hint] || hint)) }), '#8fb7ff');
         }
       }
     },
@@ -1040,8 +979,21 @@
         pr.push({ key: 'Q', text: RC.L('Fırlat (dikkat dağıt)') });
         pr.push({ key: p.crouch ? 'SPACE' : 'S + SPACE', text: RC.L(p.crouch ? 'Sessizce yere koy' : 'Sessizce koy (ayakta: düşürür!)'), color: p.crouch ? '#3ddc84' : '#ffc83d' });
       }
+      // tryInteract() ile aynı öncelik: alarm paneli → çekmece/dolap → kapı
+      const door = RC.Doors.nearPlayer(this);
       const cont = !p.held && this.containerNear();
-      if (cont) pr.push({ key: 'E', text: RC.L('Aç: {c}', { c: RC.L(cont.container.label) }), color: '#ffd24a' });
+      if (this.panelNear()) pr.push({ key: 'E', text: RC.L('Alarm panelini hackle'), color: '#4aa8ff' });
+      else if (cont && (!door || Math.abs(door.x - p.cx) > 26)) pr.push({ key: 'E', text: RC.L('Aç: {c}', { c: RC.L(cont.container.label) }), color: '#ffd24a' });
+      else if (door) {
+        let txt = RC.L('Kapıyı kapat');
+        let col = '#9aa3c7';
+        if (door.closed) {
+          const pick = door.locked && !(door.exterior && p.cx > door.x);
+          txt = RC.L(pick ? 'Kilitli kapı: kilidi kır' : 'Kapıyı aç');
+          col = pick ? '#ff8c2e' : '#ffd24a';
+        }
+        pr.push({ key: 'E', text: txt, color: col });
+      }
       if (W.safe && !W.safe.state.open && p.near(W.safe, 30)) {
         pr.push({ key: 'E', text: RC.L(p.hasKey ? 'Kasayı aç' : 'Kasa kilitli — anahtarı bul'), color: p.hasKey ? '#3ddc84' : '#ff8c2e' });
       }
@@ -1062,10 +1014,24 @@
     touchGestures() {
       return this.state === 'play';
     },
-    /** Dokunuş: ekrandaki ipucuna göre al/bırak/yükle ya da aç/kaç */
-    touchTap() {
+    /**
+     * Dokunuş: ekrandaki ipucuna göre al/bırak/yükle ya da aç/kaç.
+     * Kapıya, kasaya ya da alarm paneline dokunulursa (yakındaysa) her zaman onu açar;
+     * böylece elde eşya varken ya da yanda eşya dururken de kapı açılabilir.
+     */
+    touchTap(pos) {
       const p = this.player;
       if (!p) return 'grab';
+      if (pos && this.camera && this.prompts.some((pr) => pr.key === 'E')) {
+        const w = this.camera.screenToWorld(pos.x, pos.y);
+        const inRect = (x, y, rw, rh, m) => w.x > x - m && w.x < x + rw + m && w.y > y - m && w.y < y + rh + m;
+        const d = RC.Doors.nearPlayer(this);
+        if (d && inRect(d.x - 32, d.y - d.h, 64, d.h, 36)) return 'interact';
+        const s = this.world.safe;
+        if (s && !s.state.open && p.near(s, 30) && inRect(s.x, s.y, s.w, s.h, 36)) return 'interact';
+        const pn = this.world.panel;
+        if (this.panelNear() && inRect(pn.x - pn.w / 2, pn.y, pn.w, pn.h, 50)) return 'interact';
+      }
       if (p.held || p.grabCandidate || (p.bag.length && this.inTruckZone(p))) return 'grab';
       if (this.prompts.some((pr) => pr.key === 'E')) return 'interact';
       return 'grab';
@@ -1077,7 +1043,7 @@
       const W = RC.Game.W;
       const H = RC.Game.H;
       const out = [];
-      if (this.state === 'minigame' || this.state === 'mg') {
+      if (this.state === 'mg') {
         out.push({ x: W - 84, y: 20, w: 64, h: 64, name: 'back', code: 'Touch.back', draw: 'close' });
         return out;
       }
@@ -1294,7 +1260,6 @@
         RC.Minimap.render(ctx, this, 0, 0, true);
       }
       if (this.state === 'intro') this.drawIntroBanner(ctx, Wd, Hd);
-      if (this.state === 'minigame') this.drawMinigame(ctx, Wd, Hd, t);
       if (this.state === 'mg' && this.mg) this.mg.game.draw(ctx, Wd, Hd, t);
       if (this.state === 'caught') {
         const k = U.clamp(this.stateT / 1.5, 0, 1);
@@ -1371,7 +1336,7 @@
       // Kasa etiketi
       const s = this.world.safe;
       if (s && !s.state.open && U.dist(p.cx, p.cy, s.x + s.w / 2, s.y) < 300) {
-        D.text(ctx, p.hasKey ? 'KASA  [E]' : 'KASA  🔒', s.x + s.w / 2, s.y - 12, { size: 13, align: 'center', weight: 'bold', color: p.hasKey ? '#3ddc84' : '#ffc83d', stroke: 'rgba(0,0,0,0.8)', strokeW: 4 });
+        D.text(ctx, p.hasKey ? RC.T('KASA  [E]', 'KASA  · DOKUN') : 'KASA  🔒', s.x + s.w / 2, s.y - 12, { size: 13, align: 'center', weight: 'bold', color: p.hasKey ? '#3ddc84' : '#ffc83d', stroke: 'rgba(0,0,0,0.8)', strokeW: 4 });
       }
     },
 
@@ -1385,59 +1350,6 @@
       D.text(ctx, RC.L(this.cfg.name).toLocaleUpperCase(RC.I18N.lang === 'en' ? 'en-US' : 'tr-TR'), w / 2, h / 2 + 12, { size: 40, font: C.FONT_TITLE, align: 'center', color: '#fff', shadow: true });
       D.text(ctx, RC.L('{t} — Ev sahibini uyandırmadan en çok ganimeti kamyona yükle!', { t: U.formatTime(this.totalTime) }), w / 2, h / 2 + 44, { size: 16, align: 'center', color: '#dfe3f5' });
       ctx.globalAlpha = 1;
-    },
-
-    drawMinigame(ctx, w, h, t) {
-      const m = this.minigame;
-      if (!m) return;
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(0, 0, w, h);
-      const cx = w / 2;
-      const cy = h / 2 - 10;
-      D.panel(ctx, cx - 220, cy - 220, 440, 440, { accent: C.COLORS.gold });
-      D.text(ctx, 'KASAYI AÇ', cx, cy - 178, { size: 26, font: C.FONT_TITLE, align: 'center', color: C.COLORS.gold });
-      const R = 130;
-      // Kadran
-      const g = ctx.createRadialGradient(cx - 30, cy - 30, 10, cx, cy, R + 20);
-      g.addColorStop(0, '#8a909c');
-      g.addColorStop(1, '#3a3f4a');
-      U.circle(ctx, cx, cy, R + 18, g);
-      U.circle(ctx, cx, cy, R, '#23262e');
-      // Hedef bölge
-      ctx.strokeStyle = '#3ddc84';
-      ctx.lineWidth = 22;
-      ctx.beginPath();
-      ctx.arc(cx, cy, R - 16, m.zoneA - m.zoneW / 2, m.zoneA + m.zoneW / 2);
-      ctx.stroke();
-      // Çentikler
-      ctx.strokeStyle = '#d9dde4';
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 40; i++) {
-        const a = (i / 40) * U.TAU;
-        const r1 = i % 5 === 0 ? R - 30 : R - 22;
-        U.line(ctx, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, cx + Math.cos(a) * (R - 6), cy + Math.sin(a) * (R - 6));
-      }
-      // İbre
-      ctx.strokeStyle = m.flash > 0 ? m.flashCol : '#ff3043';
-      ctx.lineWidth = 6;
-      ctx.lineCap = 'round';
-      U.line(ctx, cx, cy, cx + Math.cos(m.angle) * (R - 10), cy + Math.sin(m.angle) * (R - 10));
-      ctx.lineCap = 'butt';
-      U.circle(ctx, cx, cy, 20, '#8a909c');
-      U.circle(ctx, cx, cy, 10, '#2a2e36');
-      if (m.flash > 0) {
-        ctx.strokeStyle = U.rgba(m.flashCol, m.flash);
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.arc(cx, cy, R + 26, 0, U.TAU);
-        ctx.stroke();
-      }
-      // Turlar
-      for (let i = 0; i < m.rounds; i++) {
-        U.circle(ctx, cx - 30 + i * 30, cy + 170, 9, i < m.round ? '#3ddc84' : 'rgba(255,255,255,0.2)');
-      }
-      D.text(ctx, RC.T('İbre YEŞİL bölgedeyken SPACE bas!  ·  ESC: vazgeç', 'İbre YEŞİL bölgedeyken ekrana dokun!  ·  X: vazgeç'), cx, cy + 200, { size: 14, align: 'center', color: '#dfe3f5' });
-      D.text(ctx, 'Hatalı deneme ses çıkarır!', cx, cy - 150, { size: 13, align: 'center', color: '#ff8c2e' });
     },
 
     drawPause(ctx, w, h, t) {

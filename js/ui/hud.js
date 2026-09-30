@@ -198,7 +198,16 @@
         const d = scene.dog;
         D.icon(ctx, 'dog', x + 22, dy + 10, 18, '#e6d3a8');
         const nm = d.name || 'Bekçi Köpeği';
-        const dt = d.state === 'sleep' ? RC.L('{n} uyuyor', { n: nm }) : d.state === 'chase' ? RC.L('{n} HAVLIYOR!', { n: nm.toLocaleUpperCase('tr-TR') }) : RC.L('{n} tetikte', { n: nm });
+        const dt =
+          d.state === 'sleep'
+            ? RC.L('{n} uyuyor', { n: nm })
+            : d.state === 'chase'
+              ? RC.L('{n} HAVLIYOR!', { n: nm.toLocaleUpperCase('tr-TR') })
+              : d.state === 'track'
+                ? RC.L('{n} izini sürüyor', { n: nm })
+                : d.state === 'guard'
+                  ? RC.L('{n} kapıyı bekliyor', { n: nm })
+                  : RC.L('{n} tetikte', { n: nm });
         D.text(ctx, dt, x + 42, dy + 15, { size: 12, weight: 'bold', color: d.state === 'chase' ? '#ff3043' : d.state === 'sleep' ? '#8fb7ff' : '#ffc83d' });
       }
     },

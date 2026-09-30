@@ -325,7 +325,7 @@
         id: 10,
         name: 'Paşa Konağı',
         short: 'Dev Bahçeli Konak · Final',
-        desc: 'Devasa bir bahçe, havuz, kulübe, bir bekçi köpeği, iki bekçi, hazine odası ve şehrin en gelişmiş güvenlik sistemi. Büyük final!',
+        desc: 'Devasa bir bahçe, havuz, kulübe, iz süren zeki bir Doberman, iki bekçi, hazine odası ve şehrin en gelişmiş güvenlik sistemi. Büyük final!',
         floors: 3,
         basement: true,
         width: 4800,
@@ -334,7 +334,8 @@
           { name: 'Emekli Paşa', color: '#8a2d2d', cap: '#ffffff', mustache: true, sleepDepth: 0.85, look: { sex: 'm', age: 'old', build: 1.1, hair: 'gray', hairColor: '#e6e2dc', skin: '#dcaa84', outfit: 'robe', top: '#6e2222', bottom: '#e8e0c8', accent: '#ffffff' } },
           { name: 'Paşanın Eşi', color: '#2d6a8a', cap: '#ffd1e0', mustache: false, sleepDepth: 0.8, look: { sex: 'f', age: 'old', build: 0.95, hair: 'bun', hairColor: '#b8b4b0', skin: '#ecc8aa', glasses: true, outfit: 'robe', top: '#2d5a7a', bottom: '#e4ecf2', accent: '#ffd1e0' } },
         ],
-        dog: true,
+        dog: 'smart',
+        dogName: 'Kont',
         items: 2720,
         target: 550000,
         stars: [550000, 1000000, 1600000],
@@ -604,7 +605,7 @@
       {
         id: 'safecracker',
         name: 'Kasa Ustası Kursu',
-        desc: 'Kasa açma mini oyununda daha geniş hedef.',
+        desc: 'Kasa kadranında ve kilit delmede daha geniş hata payı.',
         icon: 'safe',
         costs: [24000, 75000],
         effect: (l) => RC.L('+%{v} hedef bölge', { v: l * 35 }),
@@ -741,7 +742,8 @@
         { who: 'boss', mood: 'serious', text: 'Ve... büyük final. Paşa Konağı.' },
         { who: 'boss', mood: 'serious', text: 'Koca bir bahçe, havuz, bahçe kulübesi. Üç kat artı bodrum. Bodrumda da hazine odası.' },
         { who: 'hero', mood: 'worried', text: 'Bahçede bir şey havlıyor gibi...' },
-        { who: 'boss', mood: 'angry', text: 'Konağın bir bekçi köpeği var. Bir de iki bekçi, onlarca kamera ve şehrin en iyi alarm sistemi.' },
+        { who: 'boss', mood: 'angry', text: 'Bahçede Kont var: eğitimli bir Doberman. Kokunu alır, izini sürer; çalıya saklanman onu kandırmaz.' },
+        { who: 'boss', mood: 'serious', text: 'Fırlattığın bir şeye bir kez kanar, ikincisinde kanmaz. Eve girersen kapının önünde bekler. Bir de iki bekçi, onlarca kamera ve şehrin en iyi alarm sistemi.' },
         { who: 'boss', mood: 'normal', text: 'Emekli Paşa ve eşi üst katlarda, kilitli odalarda yatıyor. Hizmetçiler bu gece izinli.' },
         { who: 'boss', mood: 'grin', text: 'Bu işi de bitirirsen köprü altından yalıya taşınıyoruz evlat. Son kez: sessiz, hızlı, temiz!' },
         { who: 'hero', mood: 'happy', text: 'Sessiz, hızlı, temiz!' },
@@ -855,7 +857,7 @@
         crew: null,
         options: [
           { id: 'drill', name: 'Termik matkap', desc: 'Kasa daha kolay açılır ama her aşama gürültü yapar.' },
-          { id: 'stetho', name: 'Stetoskop', desc: 'Tamamen sessiz, ama kasa daha zor ve daha çok aşamalı.' },
+          { id: 'stetho', name: 'Stetoskop', desc: 'Sessiz: kadranın tıklarını net duyarsın, yanlış dönüş daha az ses çıkarır.' },
         ],
       },
     ],
@@ -893,7 +895,17 @@
       'Uyuyan birinin yüzüne el feneri tutma.',
       'Ağır eşyalar seni yavaşlatır ve daha sesli yürürsün.',
       'M tuşu ile evin haritasını açabilirsin.',
+      'Dış kapıyı delerken pime gelince baskıyı azalt; mavi (sertleştirilmiş) pimleri kesik kesik del.',
+      'Kasa kadranında tık sesi en güçlüyken dur ve ters yöne dön.',
+      'Zeki köpekler kokunu takip eder; izin yarım dakikada kaybolur.',
     ],
+    /** Dokunmatikte ipuçlarının karşılığı (klavye tuşu geçenler) */
+    HINTS_TOUCH: {
+      'Bir eşyayı Q ile fırlatıp ev sahibini başka yere yönlendirebilirsin.': 'Eşya elindeyken ekrana basılı tut: fırlatırsın. Ev sahibini başka yere yönlendirir.',
+      'SHIFT ile koşarsın ama koşmak çok ses çıkarır.': 'Aynı yöne uzun kaydırırsan koşarsın ama koşmak çok ses çıkarır.',
+      'F ile el fenerini açıp kapatabilirsin; karanlıkta kapalı fener seni daha zor fark ettirir.': 'Ekrana basılı tutarak el fenerini açıp kapatabilirsin; kapalı fener seni daha zor fark ettirir.',
+      'M tuşu ile evin haritasını açabilirsin.': 'Mini haritaya basılı tutarak evin haritasını açabilirsin.',
+    },
   };
 
   /**

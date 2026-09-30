@@ -513,7 +513,7 @@
         ctx.fillRect(0, 0, w, h);
       }
       D.vignette(ctx, w, h, 0.7);
-      if (t > 0.6 && t < 6) D.text(ctx, 'Geç: herhangi bir tuş', w - 20, h - bar - 14 + (bar > 0 ? 0 : 0), { size: 12, align: 'right', color: '#5a6284' });
+      if (t > 0.6 && t < 6) D.text(ctx, RC.T('Geç: herhangi bir tuş', 'Geç: dokun'), w - 20, h - bar - 14 + (bar > 0 ? 0 : 0), { size: 12, align: 'right', color: '#5a6284' });
     },
   };
 })(window.RC);

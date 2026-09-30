@@ -283,13 +283,15 @@
           this.particles.confetti(w / 2, 120, 160, w);
         }
       } else if (this.phase === 'gift') {
-        if (I.wasPressed('KeyC') && navigator.clipboard) {
+        // Kod kutusu: ekranın ortasının 30 px üstünde, 400x64 (render ile aynı)
+        const onCode = I.mouse.pressed && I.hover(w / 2 - 200, RC.Game.H / 2 - 36, 400, 64);
+        if ((I.wasPressed('KeyC') || onCode) && navigator.clipboard) {
           navigator.clipboard.writeText(this.code).then(
             () => (this.copied = true),
             () => {}
           );
         }
-        if (this.phaseT > 1.5 && (I.wasPressed('Enter') || I.wasPressed('Escape'))) RC.Game.go('menu');
+        if (this.phaseT > 1.5 && (I.wasPressed('Enter') || I.wasPressed('Escape') || (I.mouse.pressed && !onCode))) RC.Game.go('menu');
       }
     },
     render(ctx) {
@@ -399,7 +401,7 @@
       ctx.setLineDash([]);
       D.text(ctx, this.code, 0, 36, { size: 30, font: C.FONT_MONO, align: 'center', color: '#3ddc84' });
       D.text(ctx, L('İndirim kodunu kaybetmeyin!'), 0, 94, { size: 17, align: 'center', color: '#ff8c2e', weight: 'bold' });
-      D.text(ctx, this.copied ? L('Kopyalandı ✓') : L('C: kodu kopyala · ENTER: ana menü'), 0, 132, { size: 13, align: 'center', color: '#9aa3c7' });
+      D.text(ctx, this.copied ? L('Kopyalandı ✓') : L(RC.T('C: kodu kopyala · ENTER: ana menü', 'Koda dokun: kopyala · Başka yere dokun: ana menü')), 0, 132, { size: 13, align: 'center', color: '#9aa3c7' });
       ctx.restore();
       this.particles.render(ctx, null);
     },

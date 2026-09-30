@@ -96,7 +96,7 @@
       U.strokeRoundRect(ctx, b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1, 6);
       const mono = C.FONT_MONO;
       D.icon(ctx, def.icon, b.x + 34, b.y + 36, 26, owned ? DIM : GREEN);
-      if (!def.perm) D.text(ctx, '[' + def.key + ']', b.x + 34, b.y + 74, { size: 13, font: mono, align: 'center', color: DIM });
+      if (!def.perm && !RC.Touch.active) D.text(ctx, '[' + def.key + ']', b.x + 34, b.y + 74, { size: 13, font: mono, align: 'center', color: DIM });
       D.text(ctx, L(def.name).toLocaleUpperCase(RC.I18N.lang === 'en' ? 'en-US' : 'tr-TR'), b.x + 66, b.y + 28, { size: 16, font: mono, color: owned ? DIM : '#b8ffd6' });
       ctx.font = `13px ${mono}`;
       const lines = U.wrapText(ctx, L(def.desc), b.w - 190);
@@ -104,7 +104,7 @@
       const tag = owned ? L('SAHİPSİN') : def.perm ? L('KALICI') : L('x{n} paket · elde: {c}', { n: def.pack, c: count });
       D.text(ctx, tag, b.x + 66, b.y + b.h - 8, { size: 12, font: mono, color: owned ? GREEN : '#4a9a6a' });
       D.text(ctx, owned ? '—' : U.formatMoney(def.price), b.x + b.w - 14, b.y + 30, { size: 18, font: mono, align: 'right', color: owned ? DIM : afford ? '#ffd24a' : '#ff5060' });
-      if (hv > 0.5 && !owned) D.text(ctx, L('[ENTER] SATIN AL'), b.x + b.w - 14, b.y + b.h - 10, { size: 12, font: mono, align: 'right', color: GREEN, alpha: 0.6 + Math.sin(t * 8) * 0.4 });
+      if (hv > 0.5 && !owned) D.text(ctx, L(RC.T('[ENTER] SATIN AL', '[DOKUN] SATIN AL')), b.x + b.w - 14, b.y + b.h - 10, { size: 12, font: mono, align: 'right', color: GREEN, alpha: 0.6 + Math.sin(t * 8) * 0.4 });
       ctx.restore();
     },
     update(dt) {
@@ -162,7 +162,7 @@
       ctx.fillStyle = 'rgba(0,0,0,0.18)';
       for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
       D.vignette(ctx, w, h, 0.8);
-      D.text(ctx, L('Ekipmanlar soygunda 1-5 tuşlarıyla kullanılır. Kalıcı ekipmanlar otomatik çalışır.'), w / 2, h - 12, { size: 12, font: mono, align: 'center', color: DIM });
+      D.text(ctx, L(RC.T('Ekipmanlar soygunda 1-5 tuşlarıyla kullanılır. Kalıcı ekipmanlar otomatik çalışır.', 'Ekipmanlar soygunda alttaki yeşil düğmelere dokunarak kullanılır. Kalıcı ekipmanlar otomatik çalışır.')), w / 2, h - 12, { size: 12, font: mono, align: 'center', color: DIM });
     },
   };
 })(window.RC);

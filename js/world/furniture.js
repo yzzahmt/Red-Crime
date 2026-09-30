@@ -1211,7 +1211,7 @@
       h: 84,
       garden: true,
       surfaces: () => [],
-      draw(ctx, w, h) {
+      draw(ctx, w, h, pal, t, st) {
         ctx.fillStyle = '#8a3a2a';
         U.poly(ctx, [-8, 30, w / 2, -6, w + 8, 30]);
         rect(ctx, 4, 28, w - 8, h - 28, '#b8864a', 2);
@@ -1225,7 +1225,7 @@
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 11px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('KARABAŞ', w / 2, 42);
+        ctx.fillText((st && st.label) || 'KARABAŞ', w / 2, 42);
       },
     },
     gardentable: {
