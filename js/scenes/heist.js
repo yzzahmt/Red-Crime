@@ -529,7 +529,7 @@
           d.locked = false;
           RC.Doors.open(this, d, p);
         } else if (d.closed && d.locked) {
-          // Dış kapı: matkap + maymuncuk. İç kapılar: yalnızca kısa maymuncuk aşaması
+          // Kilit açma: alet seç (maymuncuk / vurma anahtarı / matkap). Dış kapı daha zor.
           this.startMinigame(new RC.Minigames.LockpickGame(this, d, { drill: !!d.exterior }), 'lockpick', d);
         } else if (d.closed) {
           RC.Doors.open(this, d, p);
@@ -616,7 +616,7 @@
           this.openSafe();
         }
       } else if (res === 'fail' && type === 'lockpick') {
-        this.toast(RC.L('Matkap uçları bitti. Kilit kırılamadı.'), '#ff3043');
+        this.toast(this.mg.game.failMsg || RC.L('Matkap uçları bitti. Kilit kırılamadı.'), '#ff3043');
       } else if (res === 'alarm') {
         RC.Security.trigger(this, this.world.panel.x, this.world.panel.y, RC.L('Panel hatalı şifreyle kilitlendi!'));
       }
@@ -729,7 +729,8 @@
       if (this.plan && this.plan.decoy === 'none' && this.loadedValue > 0) {
         this.loadedValue = Math.round(this.loadedValue * 1.1);
       }
-      const stars = this.cfg.stars.filter((v) => this.loadedValue >= v).length;
+      // Kamyon sensiz gittiyse soygun başarısız: yıldız yok, sonraki bölüm açılmaz
+      const stars = this.leftBehind ? 0 : this.cfg.stars.filter((v) => this.loadedValue >= v).length;
       const lost = this.leftBehind ? p.bagValue + (p.held ? p.held.value : 0) : 0;
       RC.Game.go('results', {
         level: this.levelIndex,
@@ -1167,6 +1168,23 @@
         }
       }
 
+      // Yumuşak temas gölgeleri (karakterler zemine otursun)
+      const contact = (x, y, rx) => {
+        const g = ctx.createRadialGradient(x, y, 0, x, y, rx);
+        g.addColorStop(0, 'rgba(0,0,0,0.42)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(1, 0.22);
+        ctx.translate(-x, -y);
+        ctx.fillRect(x - rx, y - rx, rx * 2, rx * 2);
+        ctx.restore();
+      };
+      for (const r of this.residents) if (r.state !== 'sleep') contact(r.x, r.y, 34);
+      if (this.dog) contact(this.dog.x, Math.max(this.dog.y, 0) || 0, 30);
+      if (!p.hiddenInTruck && p.onGround !== false) contact(p.cx, p.bottom, 30);
+
       // Ev sahipleri ve yorganları
       for (const r of this.residents) r.draw(ctx, t);
       RC.WorldRender.drawBlankets(ctx, this);
@@ -1249,6 +1267,9 @@
       }
       this.particles.renderTexts(ctx);
       ctx.restore();
+
+      // Sinematik son işlem (renk tonu, vinyet, gren)
+      this.lighting.post(ctx, this, Wd, Hd);
 
       // Arayüz
       RC.HUD.toastY = this.tutorial && this.tutorial.active ? 200 : 104;

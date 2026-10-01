@@ -723,7 +723,8 @@
 
       const lookX = Math.cos(this.aim);
       const lookY = Math.sin(this.aim);
-      RC.Draw.character(ctx, {
+      const box = { x0: cx - R * 2.4, y0: cy - R * 2, x1: cx + R * 2.4, y1: cy + R * 1.5 };
+      RC.Draw.shaded(ctx, box, this.facing, (ctx) => RC.Draw.character(ctx, {
         x: cx,
         y: cy,
         r: R,
@@ -742,8 +743,8 @@
         glove: '#2a2d3e',
         alpha,
         t,
-        shadow: this.onGround && !this.climbing,
-      });
+        shadow: false,
+      }));
 
       // El feneri
       if (this.flashOn && !this.held && !this.climbing) {

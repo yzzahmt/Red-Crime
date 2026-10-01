@@ -257,6 +257,18 @@ window.RC = window.RC || {};
     return U.rgbToHex(U.lerp(a.r, b.r, t), U.lerp(a.g, b.g, t), U.lerp(a.b, b.b, t));
   };
   U.hsl = (h, s, l, a = 1) => `hsla(${h},${s}%,${l}%,${a})`;
+  /**
+   * Önbellek tuvallerinin çözünürlük çarpanı: ekranın gerçek piksel yoğunluğu
+   * (dpr × ölçek), grafik kalitesine ve verilen üst sınıra göre kırpılır.
+   * Böylece Retina / telefon ekranlarında arka planlar bulanık görünmez.
+   */
+  U.cacheRes = (max = 2) => {
+    const G = RC.Game;
+    const q = RC.Save && RC.Save.settings ? RC.Save.settings.quality : 'high';
+    const cap = Math.min(max, q === 'low' ? 1 : q === 'medium' ? 1.5 : 2);
+    if (!G || !G.dpr || !G.scale) return 1;
+    return U.clamp(Math.ceil(G.dpr * G.scale * 4) / 4, 1, cap);
+  };
 
   /* ---------------------------------------------------------------------
    * Çizim yardımcıları

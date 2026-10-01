@@ -17,39 +17,56 @@
   const L = (s, v) => RC.L(s, v);
 
   /* =====================================================================
-   * KİLİT KIRMA (fare ile iki aşama)
-   *  1) MATKAP (dış kapı): sol tuşu basılı tut = matkap döner, baskı artar; bırak =
-   *     baskı düşer. Hedef, göbeğin ortası değil kesme çizgisidir (pimlerin geçtiği
-   *     yer). Uç her pime gelince zorlanır: baskıyı azalt. Sertleştirilmiş çelik
-   *     pim çok çabuk ısıtır: kesik kesik (bas-bırak) del. Uç dönerken sapar.
-   *  2) TORNAVİDA (dış kapı): basılı tutup kilidin çevresinde saat yönünde
-   *     döndür (ya da D). Kırık pim parçası takılırsa biraz geri çevir, sonra ileri.
-   *  MAYMUNCUK (iç kapı): sol tuş basılıyken pimin altında yukarı sürükle; pim kesme
-   *     çizgisine gelince oturur. Fazla kaldırmak pimi düşürür.
+   * KİLİT AÇMA: gerçek yöntemler, alet seçimiyle
+   *  0) ALET SEÇ: Maymuncuk (sessiz, ustalık ister), Vurma anahtarı (hızlı, şansa
+   *     bağlı, orta ses), Matkap (garanti ama gürültülü). TAB / düğme: alet değiştir.
+   *  MAYMUNCUK (tek tek pim kaldırma): soldaki gerdirme teliyle tapaya gerilim ver.
+   *     Gerilim altında yalnızca bir pim "bağlar" (SIKI hissedilir); onu kesme
+   *     çizgisine kaldır. Gerilim çok düşükse oturan pimler düşer, çok sertse pim
+   *     kıpırdamaz ve maymuncuk kırılır. Fazla kaldırılan bağlayan pim sıkışır:
+   *     gerilimi tamamen bırak, baştan başla. Makara (güvenlik) pim sahte oturma
+   *     yapar: gerilimi hafiflet ve biraz daha kaldır.
+   *  VURMA ANAHTARI: güç ibresi yeşildeyken çekiçle vur; pimler zıplar, kesme
+   *     çizgisinde ayrılanlar oturur. Zayıf vuruş boşa gider, sert vuruş anahtarı büker.
+   *  MATKAP (+ TORNAVİDA): ucu kesme çizgisine daya, baskıyı yeşil bantta tut,
+   *     ısınınca bırak. Uç deliğe oturunca kendini ortalar. Sonra silindiri çevir.
    *  Arayüz: update(dt) -> null | 'win' | 'cancel' | 'fail'
    * =================================================================== */
-  const DRILL_BAND = [0.5, 0.78]; // ideal baskı aralığı (pimler arası)
-  const PIN_BAND = [0.3, 0.55]; // pimi delerken
-  const HARD_BAND = [0.22, 0.45]; // sertleştirilmiş pim
+  const DRILL_BAND = [0.45, 0.8]; // ideal baskı aralığı (pimler arası)
+  const PIN_BAND = [0.3, 0.6]; // pimi delerken
+  const HARD_BAND = [0.25, 0.5]; // sertleştirilmiş pim
   const SHEAR_Y = -40; // kesme çizgisi: göbek merkezinin 40 px üstü
   const TURN_GOAL = Math.PI / 2; // kam 90° dönünce dil çekilir
   const PANEL_W = 640;
   const PANEL_H = 440;
+  const TENSION_OK = [0.25, 0.6]; // maymuncuk: ideal gerilim
+  const TENSION_SPOOL = [0.1, 0.3]; // makara pimde hafif gerilim
+  const TENSION_DROP = 0.08; // altında oturan pimler düşer
+  const TENSION_HOLD = 0.18; // pimin oturması için gereken en az gerilim
+  const TENSION_HARD = 0.75; // üstünde bağlayan pim kıpırdamaz
+  const TOOLS = [
+    { id: 'pick', name: 'MAYMUNCUK', desc: ['Gerdirme teli + kanca.', 'Sessiz ama ustalık ister.'], noise: 0.12, speed: 0.35 },
+    { id: 'bump', name: 'VURMA ANAHTARI', desc: ['Çekiçle vur, pimler zıplasın.', 'Hızlı ama şansa bağlı.'], noise: 0.55, speed: 0.8 },
+    { id: 'drill', name: 'MATKAP', desc: ['Pimleri kesme çizgisinden del.', 'Garanti ama gürültülü.'], noise: 0.95, speed: 0.6 },
+  ];
 
   class LockpickGame {
-    /** opts.drill: true = dış kapı (matkap + tornavida), false = iç kapı (maymuncuk) */
+    /** opts.drill: true = dış kapı (daha çok pim, güvenlik pimleri), false = iç kapı */
     constructor(scene, door, opts = {}) {
       this.scene = scene;
       this.door = door;
       const lvl = door.lockLevel || 1;
       const skill = RC.Save.upgradeLevel('safecracker');
       this.lvl = lvl;
-      this.withDrill = opts.drill !== false;
-      this.stage = this.withDrill ? 'drill' : 'pick';
+      this.exterior = opts.drill !== false;
+      this.stage = 'select';
+      this.method = null;
+      this.selIdx = 0;
       this.t = 0;
       this.flash = 0;
       this.flashCol = '#3ddc84';
       this.result = null;
+      this.failMsg = '';
       this.endT = 0;
       this.msg = '';
       this.msgT = 0;
@@ -59,7 +76,7 @@
         progress: 0,
         pressure: 0,
         heat: 0,
-        bits: 3,
+        bits: 4 + (scene.drill ? 1 : 0),
         spin: 0,
         bx: 0, // farenin gecikmeli konumu (hedefe göre px)
         by: 0,
@@ -68,13 +85,15 @@
         ox: 0, // ucun hedefe göre son konumu
         oy: 0,
         driftA: U.rand(0, U.TAU),
-        rate: (0.8 - lvl * 0.05) * (scene.drill ? 1.5 : 1), // sn başına ilerleme (tam baskı + tam hizada)
-        tol: 16 + skill * 2, // hizalama toleransı (px)
+        rate: (0.85 - lvl * 0.05) * (scene.drill ? 1.4 : 1), // sn başına ilerleme (tam baskı + tam hizada)
+        tol: 22 + skill * 3, // hizalama toleransı (px)
         noiseT: 0,
         cool: 0,
         shake: 0,
         snapT: 0,
+        warned: false,
       };
+      this.maxBits = this.drill.bits;
       this.chips = [];
 
       // Delinecek pimler (silindir boyunca). Üst bölümlerde bazıları sertleştirilmiş çelik.
@@ -88,17 +107,24 @@
       // Tornavida
       this.turn = { a: 0, prev: null, jamAt: U.rand(0.35, 0.95), jam: true, back: 0, strain: 0, slip: 0 };
 
-      // Pimler (iç kapı maymuncuğu; sıkışma sırası rastgele)
-      const n = Math.min(3, 1 + Math.ceil(lvl / 2));
+      // Pim yığınları (maymuncuk ve vurma anahtarı aynı silindiri kullanır).
+      // Dış kapıda daha çok pim ve makara (güvenlik) pim vardır.
+      const n = this.exterior ? Math.min(6, 4 + Math.floor(lvl / 2)) : Math.min(5, 3 + Math.floor(lvl / 2));
+      const spools = this.exterior ? Math.floor((lvl + 1) / 2) : Math.floor(lvl / 2);
       this.pins = [];
-      for (let i = 0; i < n; i++) this.pins.push({ lift: 0, shear: U.rand(0.45, 0.8), set: false, shake: 0, dwell: 0 });
-      this.pinTol = 0.08 + skill * 0.01 + (scene.stethoscope ? 0.03 : 0);
+      for (let i = 0; i < n; i++) this.pins.push({ lift: 0, shear: U.rand(0.45, 0.78), set: false, setAt: 0, spool: false, fs: false, over: false, shake: 0, dwell: 0, feel: 0, jt: 0, jumpT: 0, pending: false });
+      U.shuffle(this.pins.slice()).slice(0, Math.min(n - 2, spools)).forEach((q) => (q.spool = true));
+      this.order = U.shuffle(this.pins.map((_, i) => i)); // bağlanma sırası (işleme toleransı)
+      this.pinTol = 0.07 + skill * 0.01 + (scene.stethoscope ? 0.02 : 0);
       this.hover = -1;
+      this.pk = { tension: 0, picks: 3, strain: 0, rot: 0, drag: null, dropT: 0, warnT: 0 };
+      const zw = 0.16 + skill * 0.02;
+      this.bp = { m: 0, dir: 1, speed: 0.9 + lvl * 0.2, zw, zone: U.rand(0.45, 0.85 - zw), keys: 2, wear: 0, hitT: 0, cool: 0, winT: 0 };
     }
 
     say(text, col) {
       this.msg = text;
-      this.msgT = 1.6;
+      this.msgT = 1.8;
       this.flash = 1;
       this.flashCol = col;
     }
@@ -106,6 +132,22 @@
     noise(loud, kind) {
       const d = this.door;
       this.scene.makeNoise(d.x, d.y - 90, loud, kind);
+    }
+
+    panelPos() {
+      return { px: RC.Game.W / 2 - PANEL_W / 2, py: RC.Game.H / 2 - PANEL_H / 2 };
+    }
+
+    /** "Alet değiştir" düğmesi (sağ üst) */
+    switchRect() {
+      const { px, py } = this.panelPos();
+      return { x: px + PANEL_W - 150, y: py + 16, w: 134, h: 30 };
+    }
+
+    fail(msg) {
+      this.failMsg = msg;
+      this.say(msg, '#ff3043');
+      this.result = 'fail';
     }
 
     update(dt) {
@@ -118,10 +160,67 @@
         return this.endT > 0.6 ? this.result : null;
       }
       if (I.actPressed('back')) return 'cancel';
+      if (this.stage === 'select') {
+        this.updateSelect();
+        return null;
+      }
+      const sr = this.switchRect();
+      if (I.wasPressed('Tab') || I.clickedIn(sr.x, sr.y, sr.w, sr.h)) {
+        I.mouse.pressed = false;
+        this.toSelect();
+        return null;
+      }
       if (this.stage === 'drill') this.updateDrill(dt);
       else if (this.stage === 'turn') this.updateTurn(dt);
+      else if (this.stage === 'bump') this.updateBump(dt);
       else this.updatePick(dt);
       return null;
+    }
+
+    /* ---------------- 0. aşama: alet seçimi ---------------- */
+    cardRects() {
+      const { py } = this.panelPos();
+      const cw = 192;
+      const gap = 12;
+      const x0 = RC.Game.W / 2 - (cw * 3 + gap * 2) / 2;
+      return TOOLS.map((tool, i) => ({ x: x0 + i * (cw + gap), y: py + 66, w: cw, h: 272, tool }));
+    }
+
+    updateSelect() {
+      const cards = this.cardRects();
+      const m = I.mouse;
+      const hov = cards.findIndex((c) => I.hover(c.x, c.y, c.w, c.h));
+      const moved = m.x !== this.lmx || m.y !== this.lmy;
+      this.lmx = m.x;
+      this.lmy = m.y;
+      if (hov >= 0 && (moved || m.pressed)) this.selIdx = hov;
+      if (I.actPressed('menuLeft')) this.selIdx = (this.selIdx + 2) % 3;
+      if (I.actPressed('menuRight')) this.selIdx = (this.selIdx + 1) % 3;
+      let pick = -1;
+      for (let i = 0; i < 3; i++) if (I.wasPressed('Digit' + (i + 1)) || I.wasPressed('Numpad' + (i + 1))) pick = i;
+      if (I.actPressed('confirm')) pick = this.selIdx;
+      if (m.pressed && hov >= 0) pick = hov;
+      if (pick >= 0) this.choose(TOOLS[pick].id);
+    }
+
+    choose(id) {
+      this.method = id;
+      I.consumeAll();
+      RC.Audio.play('uiSelect');
+      if (id === 'drill') this.stage = this.drill.progress >= 1 ? 'turn' : 'drill';
+      else this.stage = id;
+      const tip = { pick: 'Gerilimi yeşile getir, SIKI pimi bul ve kaldır.', bump: 'İbre yeşil bölgedeyken vur!', drill: 'Ucu kesme çizgisine daya, baskıyı yeşilde tut.' };
+      this.say(L(tip[id]), '#dfe3f5');
+    }
+
+    toSelect() {
+      // Gerdirme teli bırakılınca oturan pimler düşer (matkap ilerlemesi kalır)
+      if (this.pins.some((p) => p.set || p.fs || p.over)) this.dropPins(true);
+      this.pk.tension = 0;
+      this.pk.drag = null;
+      this.stage = 'select';
+      this.selIdx = Math.max(0, TOOLS.findIndex((x) => x.id === this.method));
+      RC.Audio.play('uiBack');
     }
 
     /* ---------------- 1. aşama: matkap ---------------- */
@@ -153,16 +252,25 @@
       // Isı: baskının küpüyle artar, bırakınca soğur. Pim, özellikle sertleştirilmiş
       // çelik pim, ucu çok daha çabuk ısıtır: kesik kesik delmek gerekir.
       const over = Math.max(0, d.pressure - band[1]);
-      const pinHeat = pin ? (pin.hard ? 3.2 : 1.6) : 1;
-      d.heat = U.clamp(d.heat + (on ? (Math.pow(d.pressure, 3) * 0.22 + over * 1.6) * pinHeat : 0) * dt - (on ? 0.05 : 0.45) * dt, 0, 1.2);
+      const pinHeat = pin ? (pin.hard ? 2 : 1.3) : 1;
+      d.heat = U.clamp(d.heat + (on ? (Math.pow(d.pressure, 3) * 0.12 + over * 0.8) * pinHeat : 0) * dt - (on ? 0.1 : 0.6) * dt, 0, 1.2);
+      // Kırılmadan önce uyar: bırakıp soğutmak için zaman kalsın
+      if (d.heat > 0.78 && !d.warned) {
+        d.warned = true;
+        this.say(L('Uç kızarıyor! Bırak, soğusun.'), '#ff8c2e');
+      } else if (d.heat < 0.5) d.warned = false;
 
-      // Uç, farenin gösterdiği yere ağır bir kütle gibi gecikmeyle gelir (bx, by).
-      // Dönerken bir tork vektörü ucu yürütür (dx, dy): fareyle ters yöne karşıla.
-      d.bx = U.damp(d.bx, m.x - cx, 7, dt);
-      d.by = U.damp(d.by, m.y - cy, 7, dt);
+      // Uç, farenin gösterdiği yere hafif gecikmeyle gelir (bx, by).
+      // Dönerken tork ucu biraz yürütür (dx, dy). Uç deliğe oturunca (ilk %6'dan
+      // sonra) delik onu yönlendirir: sapma azalır ve kendiliğinden ortalanır.
+      const seated = d.progress > 0.06;
+      d.bx = U.damp(d.bx, m.x - cx, 12, dt);
+      d.by = U.damp(d.by, m.y - cy, 12, dt);
+      d.dx = U.damp(d.dx, 0, seated ? 2.5 : 0.8, dt);
+      d.dy = U.damp(d.dy, 0, seated ? 2.5 : 0.8, dt);
       if (on) {
         d.driftA += U.rand(-1.5, 1.5) * dt;
-        const push = (10 + this.lvl * 3) * d.pressure;
+        const push = (5 + this.lvl * 1.5) * d.pressure * (seated ? 0.3 : 1);
         d.dx += Math.cos(d.driftA) * push * dt;
         d.dy += Math.sin(d.driftA) * push * dt;
         d.spin += dt * (20 + d.pressure * 40);
@@ -171,24 +279,24 @@
         d.shake = 0;
       }
       const dm = Math.hypot(d.dx, d.dy);
-      if (dm > 90) {
-        d.dx *= 90 / dm;
-        d.dy *= 90 / dm;
+      if (dm > 50) {
+        d.dx *= 50 / dm;
+        d.dy *= 50 / dm;
       }
       d.ox = d.bx + d.dx;
       d.oy = d.by + d.dy;
-      const align = U.clamp(1 - Math.hypot(d.ox, d.oy) / (d.tol * 2.2), 0, 1);
+      const align = U.clamp(1 - Math.max(0, Math.hypot(d.ox, d.oy) - d.tol * 0.5) / (d.tol * 2.5), 0, 1);
 
       if (on) {
         const inBand = d.pressure >= band[0];
         const resist = pin ? (pin.hard ? 0.4 : 0.6) : 1;
-        d.progress += (inBand ? d.rate : d.rate * 0.25) * resist * Math.max(d.pressure, 0.5) * align * align * dt;
+        d.progress += (inBand ? d.rate : d.rate * 0.25) * resist * Math.max(d.pressure, 0.5) * align * dt;
         // Uç pime girince "tutar": ani tork, matkap yana çeker
         if (pin && !pin.bite) {
           pin.bite = true;
           d.driftA = U.rand(0, U.TAU);
-          d.dx += Math.cos(d.driftA) * 14;
-          d.dy += Math.sin(d.driftA) * 14;
+          d.dx += Math.cos(d.driftA) * 6;
+          d.dy += Math.sin(d.driftA) * 6;
           this.scene.camera.shake(0.08);
           this.say(L(pin.hard ? 'Sertleştirilmiş çelik pim! Kesik kesik del.' : 'Pime geldin: baskıyı azalt.'), pin.hard ? '#4aa8ff' : '#ffc83d');
         }
@@ -216,16 +324,15 @@
         d.bits--;
         d.heat = 0.4;
         d.pressure = 0;
-        d.cool = 1.2;
-        d.progress = Math.max(0, d.progress - 0.15);
+        d.cool = 1;
+        d.progress = Math.max(0, d.progress - 0.08);
         d.snapT = 0.8; // kırık uç parçası animasyonu
         for (let k = 0; k < 14; k++) this.spawnChip(cx + d.ox, cy + d.oy, true);
         RC.Audio.play('metal', { vol: 0.9, intensity: 1 });
         this.noise(0.4, 'drill');
         this.scene.camera.shake(0.25);
         if (d.bits <= 0) {
-          this.say(L('Son matkap ucu da kırıldı!'), '#ff3043');
-          this.result = 'fail';
+          this.fail(L('Son matkap ucu da kırıldı!'));
           return;
         }
         this.say(L('Uç aşırı ısındı ve kırıldı! Kalan uç: {n}', { n: d.bits }), '#ff3043');
@@ -333,57 +440,246 @@
       }
     }
 
-    /* ---------------- 2. aşama: gerdirme + maymuncuk ---------------- */
+    /* ---------------- Maymuncuk: gerdirme teli + tek tek pim ---------------- */
     pinLayout() {
-      const w = RC.Game.W;
-      const h = RC.Game.H;
+      const { px, py } = this.panelPos();
       const n = this.pins.length;
-      const cw = 56;
-      const x0 = w / 2 - (n * cw) / 2;
-      const top = h / 2 - PANEL_H / 2 + 110;
-      return { n, cw, x0, top, travel: 120, base: top + 210 };
+      const cw = 52;
+      const x0 = RC.Game.W / 2 - (n * cw) / 2 + 30;
+      const top = py + 80;
+      const travel = 110;
+      const base = top + 204;
+      // sl: kesme çizgisi (gövde ile tapa arası). tx/ty/th: gerilim ayarı
+      return { n, cw, x0, top, travel, base, sl: base - travel * 0.95, tx: px + 40, ty: top + 14, th: 186 };
+    }
+
+    /** Gerilim bırakılınca / maymuncuk kırılınca: oturan pimler yaylarıyla düşer */
+    dropPins(quiet) {
+      for (const p of this.pins) {
+        if (p.set || p.fs || p.over) p.shake = 1;
+        p.set = false;
+        p.fs = false;
+        p.over = false;
+        p.pending = false;
+        p.dwell = 0;
+      }
+      this.pk.rot = 0;
+      this.pk.dropT = 0;
+      if (!quiet) {
+        RC.Audio.play('metal', { vol: 0.35, intensity: 0.25, pitch: 1.6 });
+        this.noise(0.06, 'lock');
+      }
     }
 
     updatePick(dt) {
       const m = I.mouse;
       const lay = this.pinLayout();
-      // Hangi pimin altındayız, maymuncuk ne kadar kaldırıyor
-      const i = Math.floor((m.x - lay.x0) / lay.cw);
-      this.hover = i >= 0 && i < lay.n ? i : -1;
-      const pickLift = U.clamp((lay.base - m.y) / lay.travel, 0, 1.1);
+      const pk = this.pk;
+      pk.warnT = Math.max(0, pk.warnT - dt);
+      // Hangi el ne tutuyor: soldaki ayar = gerdirme teli, başka yer = kanca
+      if (m.pressed) pk.drag = I.hover(lay.tx - 26, lay.ty - 20, 78, lay.th + 40) ? 'tension' : 'pick';
+      if (!m.down) pk.drag = null;
+      if (pk.drag === 'tension') pk.tension = U.clamp((lay.ty + lay.th - m.y) / lay.th, 0, 1);
+      const key = I.axis('down', 'up');
+      if (key) pk.tension = U.clamp(pk.tension + key * 0.5 * dt, 0, 1);
+      if (m.wheel) pk.tension = U.clamp(pk.tension - m.wheel * 0.04, 0, 1);
+      const ten = pk.tension;
 
+      const i = Math.floor((m.x - lay.x0) / lay.cw);
+      this.hover = pk.drag !== 'tension' && i >= 0 && i < lay.n ? i : -1;
+      const lifting = pk.drag === 'pick';
+      const pickLift = U.clamp((lay.base - m.y) / lay.travel, 0, 1.15);
+      const bi = this.order.find((k) => !this.pins[k].set);
+      const binder = bi != null ? this.pins[bi] : null;
+
+      // Gerilim neredeyse yok: oturan / sıkışan pimler düşer (sıfırlamanın yolu da bu)
+      if (ten < TENSION_DROP && this.pins.some((p) => p.set || p.fs || p.over)) {
+        pk.dropT += dt;
+        if (pk.dropT > 0.25) {
+          this.dropPins();
+          this.say(L('Gerilim bırakıldı: pimler düştü.'), '#ff8c2e');
+        }
+      } else pk.dropT = 0;
+
+      let pushing = false;
       for (let k = 0; k < this.pins.length; k++) {
         const p = this.pins[k];
-        if (p.set) continue;
-        const target = k === this.hover && m.down ? pickLift : 0;
-        p.lift = U.damp(p.lift, target, target > p.lift ? 16 : 10, dt);
-
-        if (Math.abs(p.lift - p.shear) <= this.pinTol) {
-          p.dwell += dt;
-          if (p.dwell >= 0.08) {
-            p.set = true;
-            p.lift = p.shear;
-            RC.Audio.play('safeClick', { vol: 1, pitch: 0.8 + this.pins.filter((q) => q.set).length * 0.08 });
-            this.flash = 0.6;
-            this.flashCol = '#3ddc84';
+        const touching = lifting && k === this.hover;
+        p.feel = U.damp(p.feel, touching && !p.set ? 1 : 0, 12, dt);
+        if (p.set) {
+          p.lift = U.damp(p.lift, p.setAt, 20, dt);
+          continue;
+        }
+        if (p.over) {
+          p.lift = U.damp(p.lift, p.overAt, 20, dt);
+          continue;
+        }
+        const target = touching ? pickLift : 0;
+        if (p === binder && ten >= TENSION_DROP) {
+          // Bağlayan pim: tapa ile gövde arasında sıkışır, ağır ve SIKI hareket eder
+          let tgt = target;
+          const tight = p.fs ? ten > TENSION_SPOOL[1] : ten > TENSION_HARD;
+          if (tight && tgt > p.lift) {
+            tgt = p.lift;
+            if (touching) {
+              pushing = true;
+              p.shake = Math.max(p.shake, 0.35);
+              if (pk.warnT <= 0) {
+                pk.warnT = 1.6;
+                this.say(L(p.fs ? 'Makara pim tapayı geri itiyor: gerilimi hafiflet.' : 'Pim kıpırdamıyor: gerilim çok sert!'), '#ff8c2e');
+              }
+            }
+          }
+          p.lift = U.damp(p.lift, tgt, tgt > p.lift ? 6 : 9, dt);
+          if (p.fs) p.lift = Math.max(p.lift, p.shear);
+          const goal = p.fs ? p.goal : p.shear;
+          const holds = p.fs ? ten >= TENSION_DROP : ten >= TENSION_HOLD;
+          const tol = this.pinTol * (!p.fs && ten > TENSION_OK[1] ? 0.6 : 1);
+          if (holds && Math.abs(p.lift - goal) <= tol) {
+            p.dwell += dt;
+            if (p.dwell >= 0.1) {
+              p.dwell = 0;
+              if (p.spool && !p.fs) {
+                // Sahte oturma: tapa belirgin döner ama makara pimin beli kesme çizgisinde
+                p.fs = true;
+                p.goal = Math.min(0.97, p.shear + 0.14);
+                pk.rot += 0.1;
+                RC.Audio.play('safeClick', { vol: 1, pitch: 0.55 });
+                this.say(L('Sahte oturma! Makara pim: gerilimi hafiflet, biraz daha kaldır.'), '#4aa8ff');
+              } else {
+                p.set = true;
+                p.setAt = goal;
+                p.fs = false;
+                pk.rot += 0.025;
+                const c = this.pins.filter((q) => q.set).length;
+                RC.Audio.play('safeClick', { vol: 1, pitch: 0.8 + c * 0.08 });
+                this.flash = 0.6;
+                this.flashCol = '#3ddc84';
+              }
+            }
+          } else p.dwell = 0;
+          // Fazla kaldırma: kilit pimi kesme çizgisini geçip sıkışır (overset)
+          if (holds && p.lift > goal + tol * 2.4) {
+            p.over = true;
+            p.overAt = p.lift;
+            p.shake = 1;
+            RC.Audio.play('metal', { vol: 0.4, intensity: 0.3, pitch: 1.3 });
+            this.noise(0.05, 'lock');
+            this.say(L('Pim fazla kalktı ve sıkıştı! Gerilimi tamamen bırak, baştan.'), '#ff3043');
           }
         } else {
+          // Bağlamayan pim: yay gibi serbest, oturmaz
+          p.lift = U.damp(p.lift, Math.min(target, 1.05), target > p.lift ? 16 : 12, dt);
           p.dwell = 0;
         }
-        // Fazla kaldırma: pim kesme çizgisini geçerse düşer ve tıkırdar
-        if (p.lift > p.shear + this.pinTol * 2.5) {
-          p.lift = 0;
-          p.shake = 1;
-          RC.Audio.play('metal', { vol: 0.45, intensity: 0.3 });
-          this.noise(0.12, 'lock');
-          this.say(L('Pim fazla kalktı ve düştü.'), '#ff8c2e');
+      }
+
+      // Sert gerilimle zorlamak maymuncuğu kırar
+      pk.strain = pushing ? pk.strain + dt * (0.45 + ten * 0.5) : Math.max(0, pk.strain - dt * 0.6);
+      if (pk.strain >= 1) {
+        pk.strain = 0;
+        pk.picks--;
+        this.dropPins(true);
+        pk.tension = 0;
+        pk.drag = null;
+        RC.Audio.play('metal', { vol: 0.8, intensity: 0.8, pitch: 1.8 });
+        this.noise(0.12, 'lock');
+        this.scene.camera.shake(0.15);
+        if (pk.picks <= 0) {
+          this.fail(L('Son maymuncuk da kırıldı! Kilit açılamadı.'));
+          return;
         }
+        this.say(L('Maymuncuk kırıldı! Kalan: {n}', { n: pk.picks }), '#ff3043');
       }
 
       if (this.pins.every((p) => p.set)) {
         this.result = 'win';
         RC.Audio.play('safeGood', { vol: 0.9 });
-        this.say(L('Kilit döndü!'), '#3ddc84');
+        this.say(L('Tapa döndü, kilit açıldı!'), '#3ddc84');
+      }
+    }
+
+    /* ---------------- Vurma anahtarı ---------------- */
+    updateBump(dt) {
+      const b = this.bp;
+      b.hitT = Math.max(0, b.hitT - dt);
+      b.cool = Math.max(0, b.cool - dt);
+      // Güç ibresi gidip gelir
+      b.m += b.dir * b.speed * dt;
+      if (b.m >= 1) {
+        b.m = 1;
+        b.dir = -1;
+      } else if (b.m <= 0) {
+        b.m = 0;
+        b.dir = 1;
+      }
+      // Pimler: vuruşta zıplar, kesme çizgisinde ayrılanlar orada kalır
+      for (const p of this.pins) {
+        if (p.jumpT > 0) {
+          p.jumpT -= dt;
+          p.lift = U.damp(p.lift, p.jt, 40, dt);
+          if (p.jumpT <= 0 && p.pending) {
+            p.pending = false;
+            p.set = true;
+            p.setAt = p.shear;
+          }
+        } else p.lift = U.damp(p.lift, p.set ? p.setAt : 0, p.set ? 20 : 14, dt);
+      }
+      if (this.pins.every((p) => p.set)) {
+        b.winT += dt;
+        if (b.winT > 0.25) {
+          this.result = 'win';
+          RC.Audio.play('safeGood', { vol: 0.9 });
+          this.say(L('Pimler ayrıldı, tapa döndü!'), '#3ddc84');
+        }
+        return;
+      }
+      const hit = I.mouse.pressed || I.wasPressed('Space') || I.wasPressed('Enter');
+      if (hit && b.cool <= 0) this.bumpHit();
+    }
+
+    bumpHit() {
+      const b = this.bp;
+      const pw = b.m;
+      const good = pw >= b.zone && pw <= b.zone + b.zw;
+      const strong = pw > b.zone + b.zw;
+      b.cool = 0.45;
+      b.hitT = 0.3;
+      RC.Audio.play('metal', { vol: 0.35 + pw * 0.5, intensity: 0.3 + pw * 0.5, pitch: 1.2 });
+      this.noise(0.1 + pw * 0.2, 'lock');
+      this.scene.camera.shake(0.04 + pw * 0.1);
+      const open = this.pins.filter((p) => !p.set);
+      const base = good ? 0.72 : strong ? 0.15 : 0.1;
+      let got = 0;
+      for (const p of open) {
+        p.jt = U.clamp(pw * 1.25 + U.rand(-0.1, 0.1), 0.1, 1.15);
+        p.jumpT = 0.12;
+        p.pending = Math.random() < base * (p.spool ? 0.55 : 1) * (this.exterior ? 0.85 : 1);
+        if (p.pending) got++;
+      }
+      if (strong && Math.random() < 0.5) {
+        const s = this.pins.find((p) => p.set);
+        if (s) {
+          s.set = false;
+          s.shake = 1;
+        }
+      }
+      b.wear += good ? 0.1 : strong ? 0.25 : 0.05;
+      if (good) this.say(got ? L('İyi vuruş! {n} pim ayrıldı.', { n: got }) : L('İyi vuruş ama pimler tutmadı.'), got ? '#3ddc84' : '#ffc83d');
+      else if (strong) this.say(L('Çok sert! Anahtar sekti.'), '#ff8c2e');
+      else this.say(L('Zayıf vuruş.'), '#9aa3c7');
+      // Bölge her vuruşta yer değiştirir
+      b.zone = U.rand(0.4, 0.88 - b.zw);
+      if (b.wear >= 1) {
+        b.wear = 0;
+        b.keys--;
+        this.dropPins(true);
+        RC.Audio.play('metal', { vol: 0.7, intensity: 0.6, pitch: 0.8 });
+        if (b.keys <= 0) {
+          this.fail(L('Vurma anahtarları büküldü! Kilit açılamadı.'));
+          return;
+        }
+        this.say(L('Anahtar büküldü! Yedek anahtar takıldı.'), '#ff3043');
       }
     }
 
@@ -391,17 +687,20 @@
     draw(ctx, w, h, t) {
       ctx.fillStyle = 'rgba(0,0,0,0.66)';
       ctx.fillRect(0, 0, w, h);
-      const px = w / 2 - PANEL_W / 2;
-      const py = h / 2 - PANEL_H / 2;
+      const { px, py } = this.panelPos();
       D.panel(ctx, px, py, PANEL_W, PANEL_H, { accent: C.COLORS.gold });
       D.text(ctx, L('KİLİDİ KIR'), w / 2, py + 38, { size: 26, font: C.FONT_TITLE, align: 'center', color: C.COLORS.gold });
-      const drill = this.stage === 'drill' || this.stage === 'turn';
-      const stageTxt = !this.withDrill ? 'MAYMUNCUK' : this.stage === 'drill' ? '1/2 · MATKAP' : '2/2 · TORNAVİDA';
+      const stageTxt = { select: this.exterior ? 'DIŞ KAPI · ALET SEÇ' : 'İÇ KAPI · ALET SEÇ', pick: 'MAYMUNCUK', bump: 'VURMA ANAHTARI', drill: '1/2 · MATKAP', turn: '2/2 · TORNAVİDA' }[this.stage];
       D.text(ctx, L(stageTxt), px + 20, py + 38, { size: 13, weight: 'bold', color: '#9aa3c7' });
-      if (this.stage === 'drill') this.drawDrill(ctx, w, h, t, px, py);
-      else if (this.stage === 'turn') this.drawTurn(ctx, w, h, t, px, py);
-      else this.drawPick(ctx, w, h, t, px, py);
-      if (this.msgT > 0) D.text(ctx, this.msg, w / 2, py + (drill ? PANEL_H - 42 : 70), { size: 15, align: 'center', weight: 'bold', color: this.flashCol, alpha: Math.min(1, this.msgT * 2) });
+      if (this.stage === 'select') this.drawSelect(ctx, w, h, t, px, py);
+      else {
+        if (this.stage === 'drill') this.drawDrill(ctx, w, h, t, px, py);
+        else if (this.stage === 'turn') this.drawTurn(ctx, w, h, t, px, py);
+        else if (this.stage === 'bump') this.drawBump(ctx, w, h, t, px, py);
+        else this.drawPick(ctx, w, h, t, px, py);
+        this.drawSwitch(ctx);
+      }
+      if (this.msgT > 0) D.text(ctx, this.msg, w / 2, py + PANEL_H - 42, { size: 15, align: 'center', weight: 'bold', color: this.flashCol, alpha: Math.min(1, this.msgT * 2) });
       D.text(ctx, L(RC.T('Her ses kapıdan duyulur · ESC: vazgeç', 'Her ses kapıdan duyulur · X: vazgeç')), w / 2, py + PANEL_H - 20, { size: 13, align: 'center', color: '#ff8c2e' });
       if (this.flash > 0) {
         ctx.strokeStyle = U.rgba(this.flashCol, this.flash);
@@ -598,7 +897,8 @@
       this.gauge(ctx, gx, gy, 200, d.pressure, this.band, L('BASKI'), '#4aa8ff');
       this.gauge(ctx, gx + 46, gy, 200, d.heat, null, L('ISI'), hot > 0.75 ? '#ff3043' : '#ff8c2e');
       // Yedek uçlar
-      for (let k = 0; k < 3; k++) this.drawSpareBit(ctx, gx + 104, gy + 8 + k * 56, k < d.bits);
+      const bs = Math.min(56, 200 / this.maxBits);
+      for (let k = 0; k < this.maxBits; k++) this.drawSpareBit(ctx, gx + 104, gy + 8 + k * bs, k < d.bits);
       D.text(ctx, L('UÇ'), gx + 104, gy + 218, { size: 11, align: 'center', weight: 'bold', color: '#9aa3c7' });
       D.text(ctx, Math.round(U.clamp01(d.progress) * 100) + '%', gx + 50, gy + 246, { size: 18, align: 'center', weight: 'bold', color: C.COLORS.gold });
       const cut = this.dpins.filter((q) => q.cut).length;
@@ -859,55 +1159,380 @@
       ctx.restore();
     }
 
-    drawPick(ctx, w, h, t, px, py) {
-      const lay = this.pinLayout();
-      const { n, cw, x0, top, travel, base } = lay;
-      // Silindir gövdesi
-      ctx.fillStyle = '#b8903a';
-      U.fillRoundRect(ctx, x0 - 24, top, n * cw + 48, 240, 12);
-      // Kesme çizgileri pim başına farklıdır (işleme toleransı)
+    /* ---------------- Alet seçimi çizimi ---------------- */
+    drawSelect(ctx, w, h, t, px, py) {
+      const diff = { pick: this.exterior ? 0.85 : 0.55, bump: this.exterior ? 0.55 : 0.4, drill: 0.35 };
+      this.cardRects().forEach((c, i) => {
+        const sel = i === this.selIdx;
+        ctx.save();
+        if (sel) {
+          ctx.shadowColor = C.COLORS.gold;
+          ctx.shadowBlur = 18;
+        }
+        const g = ctx.createLinearGradient(0, c.y, 0, c.y + c.h);
+        g.addColorStop(0, sel ? '#2c2a1c' : '#1b1f36');
+        g.addColorStop(1, sel ? '#17150c' : '#0f1222');
+        ctx.fillStyle = g;
+        U.fillRoundRect(ctx, c.x, c.y, c.w, c.h, 12);
+        ctx.restore();
+        ctx.strokeStyle = sel ? C.COLORS.gold : 'rgba(143,183,255,0.25)';
+        ctx.lineWidth = sel ? 2.5 : 1.5;
+        U.strokeRoundRect(ctx, c.x + 1, c.y + 1, c.w - 2, c.h - 2, 12);
+        // Tuş rozeti
+        U.fillRoundRect(ctx, c.x + 10, c.y + 10, 24, 24, 6, sel ? C.COLORS.gold : 'rgba(255,255,255,0.1)');
+        D.text(ctx, String(i + 1), c.x + 22, c.y + 28, { size: 14, align: 'center', weight: 'bold', color: sel ? '#1a1406' : '#9aa3c7' });
+        // Alet resmi
+        ctx.save();
+        ctx.translate(c.x + c.w / 2, c.y + 76 + (sel ? Math.sin(t * 3) * 2 : 0));
+        this.drawToolIcon(ctx, c.tool.id, t);
+        ctx.restore();
+        D.text(ctx, L(c.tool.name), c.x + c.w / 2, c.y + 142, { size: 17, font: C.FONT_TITLE, align: 'center', color: sel ? C.COLORS.gold : '#f2f4ff' });
+        c.tool.desc.forEach((ln, j) => D.text(ctx, L(ln), c.x + c.w / 2, c.y + 162 + j * 15, { size: 11, align: 'center', color: '#9aa3c7' }));
+        const rows = [
+          [L('SES'), c.tool.noise, '#ff8c2e'],
+          [L('HIZ'), c.tool.speed, '#4aa8ff'],
+          [L('ZORLUK'), diff[c.tool.id], '#ff5060'],
+        ];
+        rows.forEach((r, j) => {
+          const ry = c.y + 198 + j * 22;
+          D.text(ctx, r[0], c.x + 14, ry + 9, { size: 11, weight: 'bold', color: '#9aa3c7' });
+          ctx.fillStyle = 'rgba(255,255,255,0.08)';
+          U.fillRoundRect(ctx, c.x + 76, ry, c.w - 92, 10, 5);
+          ctx.fillStyle = r[2];
+          U.fillRoundRect(ctx, c.x + 76, ry, (c.w - 92) * r[1], 10, 5);
+        });
+      });
+      D.text(ctx, L(RC.T('1 · 2 · 3 ya da tıkla: alet seç', 'Bir alete dokun')), w / 2, py + PANEL_H - 66, { size: 13, align: 'center', color: '#dfe3f5' });
+    }
+
+    /** Kart üstündeki küçük alet çizimleri (merkez 0,0) */
+    drawToolIcon(ctx, id, t) {
+      ctx.lineCap = 'round';
+      if (id === 'pick') {
+        // Gerdirme teli (L) + kancalı maymuncuk
+        ctx.strokeStyle = '#8a8f98';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(-62, 22);
+        ctx.lineTo(30, 22);
+        ctx.lineTo(30, 36);
+        ctx.stroke();
+        ctx.strokeStyle = '#e6e8ee';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-62, -2);
+        ctx.lineTo(44, -2);
+        ctx.lineTo(56, -14);
+        ctx.stroke();
+        ctx.fillStyle = '#c0392b';
+        U.fillRoundRect(ctx, -70, -9, 46, 14, 6);
+        ctx.fillStyle = '#2a2c32';
+        U.fillRoundRect(ctx, -70, 15, 34, 14, 6);
+      } else if (id === 'bump') {
+        // Vurma anahtarı (dişleri en derin kesimde) + çekiç
+        ctx.fillStyle = '#d9b54a';
+        ctx.beginPath();
+        ctx.arc(-50, 10, 18, 0, U.TAU);
+        ctx.fill();
+        U.circle(ctx, -50, 10, 6, '#1b1f36');
+        ctx.beginPath();
+        ctx.moveTo(-34, 2);
+        for (let k = 0; k < 6; k++) {
+          ctx.lineTo(-24 + k * 12, 2);
+          ctx.lineTo(-18 + k * 12, -6);
+        }
+        ctx.lineTo(50, 2);
+        ctx.lineTo(54, 10);
+        ctx.lineTo(50, 18);
+        ctx.lineTo(-34, 18);
+        ctx.closePath();
+        ctx.fill();
+        const sw = Math.max(0, Math.sin(t * 4)) * 0.4;
+        ctx.save();
+        ctx.translate(30, 46);
+        ctx.rotate(-0.6 - sw);
+        ctx.fillStyle = '#6b4a2a';
+        U.fillRoundRect(ctx, -4, -48, 8, 52, 3);
+        ctx.fillStyle = '#5a606a';
+        U.fillRoundRect(ctx, -18, -60, 36, 16, 4);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.translate(-56, -18);
+        ctx.scale(0.62, 0.62);
+        const sp = this.drill.spin;
+        this.drill.spin = t * 20;
+        this.drawDrillTool(ctx, 0, 0, t, false);
+        this.drill.spin = sp;
+        ctx.restore();
+      }
+      ctx.lineCap = 'butt';
+    }
+
+    /** "Alet değiştir" düğmesi */
+    drawSwitch(ctx) {
+      const r = this.switchRect();
+      const hov = I.hover(r.x, r.y, r.w, r.h);
+      ctx.fillStyle = hov ? 'rgba(255,200,61,0.22)' : 'rgba(255,255,255,0.07)';
+      U.fillRoundRect(ctx, r.x, r.y, r.w, r.h, 8);
+      ctx.strokeStyle = hov ? C.COLORS.gold : 'rgba(143,183,255,0.3)';
+      ctx.lineWidth = 1.5;
+      U.strokeRoundRect(ctx, r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 8);
+      D.text(ctx, L(RC.T('⇄ ALET (TAB)', '⇄ ALET')), r.x + r.w / 2, r.y + 20, { size: 12, align: 'center', weight: 'bold', color: hov ? C.COLORS.gold : '#dfe3f5' });
+    }
+
+    /**
+     * Pim yığınlarının kesiti: gövde (üst), tapa (alt), tek kesme çizgisi.
+     * Her yığın: yay, üst pim (makara pim belli), boyu farklı alt pim.
+     * Tapa gerilimle döndükçe yana kayar; oturan üst pimler bu çıkıntıda durur.
+     */
+    drawPins(ctx, lay, t, showFeel) {
+      const { n, cw, x0, top, travel, base, sl } = lay;
+      const shift = Math.min(9, this.pk.rot * 55 + this.pk.tension * 3);
+      const bx = x0 - 24;
+      const bw = n * cw + 48;
+      // Gövde ve tapa
+      ctx.fillStyle = '#7d5f25';
+      U.fillRoundRect(ctx, bx, top, bw, sl - top, 10);
+      const pg = ctx.createLinearGradient(0, sl, 0, base + 48);
+      pg.addColorStop(0, '#c99e44');
+      pg.addColorStop(1, '#8a6a2a');
+      ctx.fillStyle = pg;
+      U.fillRoundRect(ctx, bx + shift, sl, bw - 12, base + 48 - sl, 10);
+      // Anahtar yuvası
+      ctx.fillStyle = '#1a1208';
+      ctx.fillRect(bx + shift, base + 28, bw - 12, 16);
+      // Kesme çizgisi
+      ctx.strokeStyle = 'rgba(61,220,132,0.85)';
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.5;
+      U.line(ctx, bx - 6, sl, bx + bw + 6, sl);
+      ctx.setLineDash([]);
+      D.text(ctx, L('kesme çizgisi'), bx + bw + 8, sl + 4, { size: 10, color: 'rgba(61,220,132,0.9)' });
+
       for (let i = 0; i < n; i++) {
         const p = this.pins[i];
         const x = x0 + i * cw + cw / 2 + (p.shake > 0 ? Math.sin(t * 60) * 3 * p.shake : 0);
-        const shearY = base - p.shear * travel;
+        // Delikler: gövdede ve (kaymış) tapada
         ctx.fillStyle = '#2a1e10';
-        ctx.fillRect(x - 12, top + 10, 24, 220);
-        ctx.strokeStyle = 'rgba(61,220,132,0.55)';
-        ctx.setLineDash([4, 3]);
-        ctx.lineWidth = 2;
-        U.line(ctx, x - 16, shearY, x + 16, shearY);
-        ctx.setLineDash([]);
-        const pinY = base - p.lift * travel;
-        // Üst pim + yay
+        ctx.fillRect(x - 11, top + 8, 22, sl - top - 8);
+        ctx.fillRect(x - 11 + shift, sl, 22, base + 28 - sl);
+        // Alt pim: alt ucu kancanın kaldırdığı yerde, boyu kesme hizasına göre
+        const keyLen = 28 + (0.95 - p.shear) * travel;
+        const bottom = base + 28 - p.lift * travel;
+        const keyTop = bottom - keyLen;
+        const drvBot = p.set || p.fs ? Math.min(keyTop, sl) : keyTop;
+        const drvTop = drvBot - 34;
+        // Yay
         ctx.strokeStyle = '#c0c4cc';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        for (let y = top + 12; y < pinY - 40; y += 6) {
-          ctx.moveTo(x - 8, y);
-          ctx.lineTo(x + 8, y + 3);
+        const coils = 7;
+        const sh = Math.max(4, drvTop - (top + 10));
+        for (let c = 0; c <= coils; c++) {
+          const yy = top + 10 + (sh * c) / coils;
+          if (c === 0) ctx.moveTo(x - 8, yy);
+          else ctx.lineTo(c % 2 ? x + 8 : x - 8, yy);
         }
         ctx.stroke();
-        U.fillRoundRect(ctx, x - 9, pinY - 38, 18, 34, 4, p.set ? '#3ddc84' : '#d9dde4');
-        U.fillRoundRect(ctx, x - 9, pinY - 2, 18, 30, 4, i === this.hover ? '#ffc83d' : '#9aa0aa');
+        // Üst pim (makara pim belli inceltilmiş, mavi çelik)
+        const dc = p.set ? '#3ddc84' : p.spool ? '#7fa3d1' : '#d9dde4';
+        if (p.spool) {
+          ctx.fillStyle = dc;
+          ctx.beginPath();
+          ctx.moveTo(x - 9, drvTop);
+          ctx.lineTo(x + 9, drvTop);
+          ctx.lineTo(x + 9, drvTop + 8);
+          ctx.lineTo(x + 5, drvTop + 13);
+          ctx.lineTo(x + 5, drvTop + 21);
+          ctx.lineTo(x + 9, drvTop + 26);
+          ctx.lineTo(x + 9, drvBot);
+          ctx.lineTo(x - 9, drvBot);
+          ctx.lineTo(x - 9, drvTop + 26);
+          ctx.lineTo(x - 5, drvTop + 21);
+          ctx.lineTo(x - 5, drvTop + 13);
+          ctx.lineTo(x - 9, drvTop + 8);
+          ctx.closePath();
+          ctx.fill();
+        } else U.fillRoundRect(ctx, x - 9, drvTop, 18, drvBot - drvTop, 4, dc);
+        // Alt pim (sivri uçlu)
+        const kc = p.over ? '#ff3043' : p.set ? '#2fb06a' : i === this.hover ? '#ffc83d' : '#b8bec8';
+        ctx.fillStyle = kc;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, keyTop + 2);
+        ctx.lineTo(x + 8, keyTop + 2);
+        ctx.lineTo(x + 8, bottom - 8);
+        ctx.lineTo(x, bottom);
+        ctx.lineTo(x - 8, bottom - 8);
+        ctx.closePath();
+        ctx.fill();
+        // Hissiyat: kanca dokununca SIKI (bağlayan) mı GEVŞEK mi
+        if (showFeel && p.feel > 0.05) {
+          const binder = this.pins[this.order.find((k) => !this.pins[k].set)] === p && this.pk.tension >= TENSION_DROP;
+          const lbl = p.over ? 'SIKIŞTI' : p.fs ? 'MAKARA' : binder ? 'SIKI' : 'GEVŞEK';
+          const col = p.over ? '#ff3043' : p.fs ? '#4aa8ff' : binder ? '#ffc83d' : '#9aa3c7';
+          D.text(ctx, L(lbl), x, top - 6, { size: 11, align: 'center', weight: 'bold', color: col, alpha: p.feel });
+        }
+        if (p.set) D.text(ctx, '✓', x, top - 6, { size: 13, align: 'center', weight: 'bold', color: '#3ddc84' });
       }
-      // Maymuncuk (fare konumunda)
+    }
+
+    drawPick(ctx, w, h, t, px, py) {
+      const lay = this.pinLayout();
+      const pk = this.pk;
+      const { n, cw, x0, base, tx, ty, th } = lay;
+      this.drawPins(ctx, lay, t, true);
+
+      // Gerilim ayarı (gerdirme teli)
+      const ten = pk.tension;
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      U.fillRoundRect(ctx, tx, ty, 26, th, 8);
+      const band = (a, b, col) => {
+        ctx.fillStyle = col;
+        ctx.fillRect(tx, ty + th * (1 - b), 26, th * (b - a));
+      };
+      band(TENSION_SPOOL[0], TENSION_SPOOL[1], 'rgba(74,168,255,0.28)');
+      band(TENSION_OK[0], TENSION_OK[1], 'rgba(61,220,132,0.32)');
+      band(TENSION_HARD, 1, 'rgba(255,48,67,0.25)');
+      const hy = ty + th * (1 - ten);
+      const hcol = ten > TENSION_HARD ? '#ff3043' : ten >= TENSION_OK[0] && ten <= TENSION_OK[1] ? '#3ddc84' : ten < TENSION_DROP ? '#6a6f78' : '#ffc83d';
+      ctx.fillStyle = hcol;
+      U.fillRoundRect(ctx, tx - 6, hy - 7, 38, 14, 6);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(tx + 4, hy - 1, 18, 2);
+      D.text(ctx, L('GERİLİM'), tx + 13, ty + th + 20, { size: 11, align: 'center', weight: 'bold', color: '#9aa3c7' });
+      D.text(ctx, Math.round(ten * 100) + '%', tx + 13, ty - 8, { size: 12, align: 'center', weight: 'bold', color: hcol });
+
+      // Gerdirme teli anahtar yuvasının altında, gerilimle bükülür
+      const kx = x0 - 24;
+      const ky = base + 40;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#8a8f98';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(kx + 18, ky);
+      ctx.lineTo(kx - 30, ky);
+      ctx.lineTo(kx - 30 - ten * 8, ky + 34);
+      ctx.stroke();
+
+      // Kanca (maymuncuk) fare konumunda
       const m = I.mouse;
       const tipX = U.clamp(m.x, x0 - 10, x0 + n * cw + 10);
-      const tipY = U.clamp(m.y, base - travel * 1.1, base + 40);
+      const tipY = U.clamp(m.y, base - lay.travel * 1.15, base + 4) + 28;
       ctx.strokeStyle = '#e6e8ee';
       ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(px + 24, base + 60);
-      ctx.lineTo(tipX - 14, tipY + 30);
-      ctx.lineTo(tipX, tipY + 26);
+      ctx.moveTo(px + 90, base + 36);
+      ctx.lineTo(tipX - 14, Math.max(tipY + 6, base + 30));
+      ctx.lineTo(tipX - 4, tipY + 4);
+      ctx.lineTo(tipX, tipY - 4);
       ctx.stroke();
+      ctx.fillStyle = '#c0392b';
+      U.fillRoundRect(ctx, px + 70, base + 30, 30, 12, 5);
       ctx.lineCap = 'butt';
-      D.text(ctx, `${this.pins.filter((p) => p.set).length}/${n}`, px + PANEL_W - 20, py + 38, { size: 16, align: 'right', color: '#9aa3c7', weight: 'bold' });
-      D.text(ctx, L(RC.T('Sol tuşla pimin altında yukarı sürükle: yeşil çizgide oturur', 'Parmağınla pimin altından yukarı sürükle: yeşil çizgide oturur')), w / 2, top + 266, { size: 13, align: 'center', color: '#dfe3f5' });
-      D.text(ctx, L('Fazla kaldırırsan pim düşer ve ses çıkar'), w / 2, top + 284, { size: 12, align: 'center', color: '#9aa3c7' });
+
+      // Yedek maymuncuklar ve zorlanma
+      const rx = px + PANEL_W - 34;
+      for (let k = 0; k < 3; k++) {
+        ctx.globalAlpha = k < pk.picks ? 1 : 0.2;
+        ctx.strokeStyle = '#e6e8ee';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        U.line(ctx, rx, py + 96 + k * 44, rx, py + 128 + k * 44);
+        U.line(ctx, rx, py + 96 + k * 44, rx + 6, py + 90 + k * 44);
+        ctx.lineCap = 'butt';
+        ctx.globalAlpha = 1;
+      }
+      D.text(ctx, L('KANCA'), rx, py + 236, { size: 10, align: 'center', weight: 'bold', color: '#9aa3c7' });
+      if (pk.strain > 0.02) {
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        U.fillRoundRect(ctx, rx - 5, py + 246, 10, 50, 4);
+        ctx.fillStyle = '#ff3043';
+        U.fillRoundRect(ctx, rx - 5, py + 296 - 50 * pk.strain, 10, 50 * pk.strain, 4);
+      }
+      D.text(ctx, `${this.pins.filter((p) => p.set).length}/${n}`, px + PANEL_W - 166, py + 38, { size: 16, align: 'right', color: '#9aa3c7', weight: 'bold' });
+      D.text(ctx, L(RC.T('Soldaki GERİLİMİ yeşile getir (W/S) · Kancayla pimi aşağıdan kaldır', 'Soldaki GERİLİMİ yeşile getir · Parmağınla pimi aşağıdan kaldır')), w / 2, py + PANEL_H - 78, { size: 12, align: 'center', color: '#dfe3f5' });
+      D.text(ctx, L('SIKI pim bağlayandır: kesme çizgisine kaldır · Mavi pim: makara, hafif gerilim'), w / 2, py + PANEL_H - 62, { size: 12, align: 'center', color: '#dfe3f5' });
+    }
+
+    drawBump(ctx, w, h, t, px, py) {
+      const lay = this.pinLayout();
+      const b = this.bp;
+      const { n, cw, x0, base } = lay;
+      this.drawPins(ctx, lay, t, false);
+      // Vurma anahtarı: tüm dişler en derin kesimde; vuruşta içeri sekiyor
+      const push = b.hitT > 0 ? Math.sin((b.hitT / 0.3) * Math.PI) * 10 : 0;
+      const ky = base + 29;
+      const kx0 = x0 - 70 + push;
+      ctx.fillStyle = '#d9b54a';
+      ctx.beginPath();
+      ctx.moveTo(kx0, ky + 14);
+      ctx.lineTo(kx0, ky + 6);
+      for (let i = 0; i < n; i++) {
+        const x = x0 + i * cw + cw / 2 + push;
+        ctx.lineTo(x - 10, ky + 6);
+        ctx.lineTo(x, ky);
+        ctx.lineTo(x + 10, ky + 6);
+      }
+      ctx.lineTo(x0 + n * cw + 6 + push, ky + 6);
+      ctx.lineTo(x0 + n * cw + 12 + push, ky + 10);
+      ctx.lineTo(x0 + n * cw + 6 + push, ky + 14);
+      ctx.closePath();
+      ctx.fill();
+      // Anahtar başı
+      ctx.beginPath();
+      ctx.arc(kx0 - 22, ky + 10, 22, 0, U.TAU);
+      ctx.fill();
+      U.circle(ctx, kx0 - 28, ky + 10, 6, '#151a30');
+      // Çekiç: vuruşta anahtar başına iner
+      const sw = b.hitT > 0 ? 1 - b.hitT / 0.3 : 0;
+      const ang = -1.1 + (b.cool > 0 ? Math.sin(sw * Math.PI) : 0) * 1.1;
+      ctx.save();
+      ctx.translate(kx0 - 44, ky + 70);
+      ctx.rotate(ang);
+      ctx.fillStyle = '#6b4a2a';
+      U.fillRoundRect(ctx, -5, -78, 10, 82, 4);
+      ctx.fillStyle = '#5a606a';
+      U.fillRoundRect(ctx, -10, -96, 28, 22, 4);
+      ctx.fillStyle = '#2a2c32';
+      U.fillRoundRect(ctx, -14, -94, 6, 18, 2);
+      ctx.restore();
+
+      // Güç ibresi
+      const mw = 300;
+      const mx = w / 2 - mw / 2 + 30;
+      const my = py + PANEL_H - 112;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      U.fillRoundRect(ctx, mx, my, mw, 14, 7);
+      ctx.fillStyle = 'rgba(255,48,67,0.35)';
+      ctx.fillRect(mx + mw * (b.zone + b.zw), my, mw * (1 - b.zone - b.zw), 14);
+      ctx.fillStyle = 'rgba(61,220,132,0.75)';
+      ctx.fillRect(mx + mw * b.zone, my, mw * b.zw, 14);
+      ctx.fillStyle = '#fff';
+      U.fillRoundRect(ctx, mx + mw * b.m - 3, my - 6, 6, 26, 3);
+      D.text(ctx, L('GÜÇ'), mx - 10, my + 12, { size: 11, align: 'right', weight: 'bold', color: '#9aa3c7' });
+
+      // Yedek anahtar + aşınma
+      const rx = px + PANEL_W - 40;
+      for (let k = 0; k < 2; k++) {
+        ctx.globalAlpha = k < b.keys ? 1 : 0.2;
+        U.circle(ctx, rx, py + 100 + k * 50, 9, '#d9b54a');
+        ctx.fillStyle = '#d9b54a';
+        ctx.fillRect(rx - 3, py + 106 + k * 50, 6, 26);
+        ctx.globalAlpha = 1;
+      }
+      D.text(ctx, L('ANAHTAR'), rx, py + 200, { size: 10, align: 'center', weight: 'bold', color: '#9aa3c7' });
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      U.fillRoundRect(ctx, rx - 5, py + 210, 10, 60, 4);
+      ctx.fillStyle = b.wear > 0.7 ? '#ff3043' : '#ff8c2e';
+      U.fillRoundRect(ctx, rx - 5, py + 270 - 60 * b.wear, 10, 60 * b.wear, 4);
+      D.text(ctx, L('AŞINMA'), rx, py + 288, { size: 10, align: 'center', weight: 'bold', color: '#9aa3c7' });
+      D.text(ctx, `${this.pins.filter((p) => p.set).length}/${n}`, px + PANEL_W - 166, py + 38, { size: 16, align: 'right', color: '#9aa3c7', weight: 'bold' });
+      D.text(ctx, L(RC.T('Tıkla / SPACE: çekiçle vur · İbre yeşildeyken vur', 'Dokun: çekiçle vur · İbre yeşildeyken vur')), w / 2, py + PANEL_H - 78, { size: 12, align: 'center', color: '#dfe3f5' });
+      D.text(ctx, L('Her vuruş ses yapar · Sert vuruş anahtarı büker'), w / 2, py + PANEL_H - 62, { size: 12, align: 'center', color: '#dfe3f5' });
     }
   }
+
 
   /* =====================================================================
    * ALARM PANELİ HACKLEME

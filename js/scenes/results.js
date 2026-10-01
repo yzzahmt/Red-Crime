@@ -231,7 +231,9 @@
         D.text(ctx, 'TEBRİKLER! Köprü altından yalıya taşındınız!', w / 2, h / 2 + 10, { size: 26, font: C.FONT_TITLE, align: 'center', color: C.COLORS.gold, stroke: '#000', strokeW: 5, alpha: U.clamp01((t - this.countDoneT - 1.5) / 0.5) });
       }
       if (!ok) {
-        const msg = this.finalFail
+        const msg = p.leftBehind && !(this.finalFail && this.attemptsLeft <= 0)
+          ? RC.L('Reis: "Kamyonu kaçırdın Red Crime. Ekip kimseyi beklemez; bu iş sayılmaz."')
+          : this.finalFail
           ? this.attemptsLeft > 0
             ? RC.L('Reis: "Hedefi tutturamadın. Bir hakkın kaldı Red Crime. SON hakkın."')
             : RC.L('Reis: "İkinci kez... Köprü altına gel. Konuşacağız."')

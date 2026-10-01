@@ -778,7 +778,8 @@
 
       const p = this.scene.player;
       const lookY = this.seesPlayer ? U.clamp((p.cy - (this.y - 80)) / 120, -1, 1) : 0;
-      const res = RC.Draw.human(ctx, {
+      const box = { x0: this.x - 60, y0: this.y - 124, x1: this.x + 60, y1: this.y + 4 };
+      const res = RC.Draw.shaded(ctx, box, f, (ctx) => RC.Draw.human(ctx, {
         x: this.x,
         y: this.y,
         facing: f,
@@ -789,8 +790,9 @@
         eyes: chase ? 'angry' : this.state === 'return' ? 'sleepy' : this.suspicion > 30 || this.state === 'calling' || this.state === 'flee' ? 'wide' : 'open',
         mouth: chase ? 'angry' : this.state === 'return' ? 'flat' : this.suspicion > 30 ? 'o' : this.isGuard ? 'flat' : 'frown',
         lookY,
+        shadow: false,
         t,
-      });
+      }));
       const hf = res.hands.front;
 
       // Aksesuarlar: telefon, el feneri, oklava

@@ -172,6 +172,95 @@
    *     mustache, cigar, chain, sunglasses, arms:[{x,y},{x,y}], sleeve, skin,
    *     glove, alpha, blink, outline, shadow, pajama, tilt}
    * ------------------------------------------------------------------- */
+  /**
+   * Karakterlere hacim ve kenar ışığı: karakter önce ayrı bir katmana çizilir,
+   * sonra yalnızca siluetin üstüne (source-atop) tepe ışığı, alt / arka gölgesi
+   * ve arka-üst kenarda ay ışığı tonunda ince bir parlama (rim light) eklenir.
+   * box: {x0, y0, x1, y1} dünya koordinatında sınırlar, facing: bakış yönü.
+   * Düşük grafik kalitesinde doğrudan çizer. fn'in dönüş değeri aynen döner.
+   */
+  const shadeBuf = { a: null, b: null };
+  Draw.shaded = (ctx, box, facing, fn) => {
+    if (!ctx.getTransform || (RC.Save && RC.Save.settings && RC.Save.settings.quality === 'low')) return fn(ctx);
+    const m = ctx.getTransform();
+    const xs = [box.x0, box.x1];
+    const ys = [box.y0, box.y1];
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const x of xs)
+      for (const y of ys) {
+        const dx = m.a * x + m.c * y + m.e;
+        const dy = m.b * x + m.d * y + m.f;
+        minX = Math.min(minX, dx);
+        maxX = Math.max(maxX, dx);
+        minY = Math.min(minY, dy);
+        maxY = Math.max(maxY, dy);
+      }
+    minX = Math.floor(minX) - 2;
+    minY = Math.floor(minY) - 2;
+    const w = Math.ceil(maxX) - minX + 4;
+    const h = Math.ceil(maxY) - minY + 4;
+    if (w <= 0 || h <= 0 || w > 2048 || h > 2048) return fn(ctx);
+    const buf = (k) => {
+      let c = shadeBuf[k];
+      if (!c) c = shadeBuf[k] = document.createElement('canvas');
+      if (c.width < w || c.height < h) {
+        c.width = Math.max(c.width, w);
+        c.height = Math.max(c.height, h);
+      }
+      const g = c.getContext('2d');
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = 1;
+      g.clearRect(0, 0, w, h);
+      return { c, g };
+    };
+    const A = buf('a');
+    const g = A.g;
+    g.setTransform(m.a, m.b, m.c, m.d, m.e - minX, m.f - minY);
+    const ret = fn(g);
+    g.setTransform(m.a, m.b, m.c, m.d, m.e - minX, m.f - minY);
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-atop';
+    // Tepe ışığı → alt gölge
+    const bh = box.y1 - box.y0;
+    const vg = g.createLinearGradient(0, box.y0, 0, box.y1);
+    vg.addColorStop(0, 'rgba(255,240,220,0.14)');
+    vg.addColorStop(0.35, 'rgba(255,240,220,0)');
+    vg.addColorStop(0.7, 'rgba(0,0,10,0.08)');
+    vg.addColorStop(1, 'rgba(0,0,10,0.3)');
+    g.fillStyle = vg;
+    g.fillRect(box.x0, box.y0, box.x1 - box.x0, bh);
+    // Arka taraf gölgede
+    const cx = (box.x0 + box.x1) / 2;
+    const back = facing > 0 ? box.x0 : box.x1;
+    const hg = g.createLinearGradient(back, 0, cx + facing * (box.x1 - box.x0) * 0.15, 0);
+    hg.addColorStop(0, 'rgba(0,0,12,0.26)');
+    hg.addColorStop(1, 'rgba(0,0,12,0)');
+    g.fillStyle = hg;
+    g.fillRect(box.x0, box.y0, box.x1 - box.x0, bh);
+    // Kenar ışığı: silueti ışık yönünde kaydırıp çıkarınca ince bir kenar kalır
+    const B = buf('b');
+    const rg = B.g;
+    rg.drawImage(A.c, 0, 0, w, h, 0, 0, w, h);
+    rg.globalCompositeOperation = 'source-in';
+    rg.fillStyle = 'rgba(170,200,255,0.6)';
+    rg.fillRect(0, 0, w, h);
+    rg.globalCompositeOperation = 'destination-out';
+    const d = U.clamp(Math.abs(m.a) * 1.3, 1.2, 2.6);
+    rg.drawImage(A.c, 0, 0, w, h, facing * d, d * 0.8, w, h);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(B.c, 0, 0, w, h, 0, 0, w, h);
+    g.globalCompositeOperation = 'source-over';
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(A.c, 0, 0, w, h, minX, minY, w, h);
+    ctx.restore();
+    return ret;
+  };
+
   Draw.character = (ctx, o) => {
     const r = o.r || 22;
     const sx = o.sx || 1;
@@ -293,9 +382,31 @@
       ctx.restore();
     }
 
-    // Parlama
-    ctx.fillStyle = o.balaclava ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
-    U.ellipse(ctx, -r * 0.38, -r * 0.5, r * 0.28, r * 0.16, -0.5);
+    // Hacim: yumuşak parlama, alt yansıma ve kenar boyunca gölge halkası
+    {
+      const hl = ctx.createRadialGradient(-r * 0.38, -r * 0.45, 0, -r * 0.38, -r * 0.45, r * 0.55);
+      hl.addColorStop(0, o.balaclava ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.45)');
+      hl.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = hl;
+      ctx.beginPath();
+      ctx.arc(0, 0, r - 0.5, 0, U.TAU);
+      ctx.fill();
+      ctx.fillStyle = o.balaclava ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.4)';
+      U.ellipse(ctx, -r * 0.4, -r * 0.52, r * 0.2, r * 0.1, -0.5);
+      const ao = ctx.createRadialGradient(0, 0, r * 0.7, 0, 0, r);
+      ao.addColorStop(0, 'rgba(0,0,0,0)');
+      ao.addColorStop(1, 'rgba(0,0,0,0.3)');
+      ctx.fillStyle = ao;
+      ctx.beginPath();
+      ctx.arc(0, 0, r - 0.5, 0, U.TAU);
+      ctx.fill();
+      // Zeminden yansıyan sıcak ışık (alt kenar)
+      ctx.strokeStyle = 'rgba(255,190,150,0.18)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r - 2, Math.PI * 0.2, Math.PI * 0.8);
+      ctx.stroke();
+    }
 
     // Altın zincir
     if (o.chain) {

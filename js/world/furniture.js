@@ -1317,13 +1317,17 @@
   function getSprite(inst) {
     const def = F[inst.type];
     if (def.animated) return null;
-    const key = inst.type + '|' + inst.w + '|' + inst.h + '|' + inst.palKey + '|' + (inst.state && inst.state.seed) + '|' + (inst.state && inst.state.open);
+    const res = U.cacheRes(1.5);
+    const key = inst.type + '|' + inst.w + '|' + inst.h + '|' + inst.palKey + '|' + (inst.state && inst.state.seed) + '|' + (inst.state && inst.state.open) + '|' + res;
     let c = cache.get(key);
     if (c) return c;
     c = document.createElement('canvas');
-    c.width = inst.w + PAD.l + PAD.r;
-    c.height = inst.h + PAD.t + PAD.b;
+    c.lw = inst.w + PAD.l + PAD.r;
+    c.lh = inst.h + PAD.t + PAD.b;
+    c.width = Math.ceil(c.lw * res);
+    c.height = Math.ceil(c.lh * res);
     const ctx = c.getContext('2d');
+    ctx.scale(res, res);
     ctx.translate(PAD.l, PAD.t);
     def.draw(ctx, inst.w, inst.h, inst.pal, 0, inst.state);
     cache.set(key, c);
@@ -1334,7 +1338,7 @@
     const def = F[inst.type];
     const sp = getSprite(inst);
     if (sp) {
-      ctx.drawImage(sp, inst.x - PAD.l, inst.y - PAD.t);
+      ctx.drawImage(sp, inst.x - PAD.l, inst.y - PAD.t, sp.lw, sp.lh);
     } else {
       ctx.save();
       ctx.translate(inst.x, inst.y);

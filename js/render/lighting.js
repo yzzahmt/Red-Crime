@@ -57,7 +57,8 @@
       ctx.globalCompositeOperation = 'source-over';
       ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       const darkness = scene.weather === 'fog' ? 0.86 : 0.87;
-      ctx.fillStyle = `rgba(3,4,14,${darkness})`;
+      // Gece mavisi karanlık (gri yerine ay ışığı tonu)
+      ctx.fillStyle = `rgba(4,7,24,${darkness})`;
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
       // Dünya dönüşümü
@@ -200,19 +201,80 @@
       mainCtx.save();
       mainCtx.globalCompositeOperation = 'lighter';
       cam.apply(mainCtx);
+      const q = RC.Save.settings.quality;
+      // Pencerelerden giren soğuk ay ışığı huzmeleri
+      if (hl < 1 && q !== 'low') {
+        const k = 1 - hl;
+        for (const win of W.windows) {
+          if (win.x + win.w < view.x - 200 || win.x > view.x + view.w + 200) continue;
+          const g = mainCtx.createLinearGradient(win.x, win.y, win.x + 60, win.y + 250);
+          g.addColorStop(0, `rgba(130,160,255,${0.11 * k})`);
+          g.addColorStop(1, 'rgba(130,160,255,0)');
+          mainCtx.fillStyle = g;
+          mainCtx.beginPath();
+          mainCtx.moveTo(win.x, win.y);
+          mainCtx.lineTo(win.x + win.w, win.y);
+          mainCtx.lineTo(win.x + win.w + 90, win.y + 236);
+          mainCtx.lineTo(win.x + 70, win.y + 236);
+          mainCtx.closePath();
+          mainCtx.fill();
+          mainCtx.fillStyle = `rgba(120,150,255,${0.08 * k})`;
+          mainCtx.fillRect(win.x, win.y, win.w, win.h);
+        }
+      }
       if (p.flashOn) {
         const clipped2 = clipFloor(mainCtx);
         const hp = p.handPos;
-        const g = mainCtx.createRadialGradient(hp.x, hp.y, 4, hp.x, hp.y, p.flashRange);
-        g.addColorStop(0, 'rgba(255,240,190,0.16)');
-        g.addColorStop(1, 'rgba(255,240,190,0)');
+        const range = p.flashRange;
+        const g = mainCtx.createRadialGradient(hp.x, hp.y, 4, hp.x, hp.y, range);
+        g.addColorStop(0, 'rgba(255,236,190,0.26)');
+        g.addColorStop(0.3, 'rgba(255,228,170,0.16)');
+        g.addColorStop(0.75, 'rgba(255,214,150,0.05)');
+        g.addColorStop(1, 'rgba(255,214,150,0)');
         mainCtx.fillStyle = g;
         mainCtx.beginPath();
         mainCtx.moveTo(hp.x, hp.y);
-        mainCtx.arc(hp.x, hp.y, p.flashRange, p.aim - p.flashSpread, p.aim + p.flashSpread);
+        mainCtx.arc(hp.x, hp.y, range, p.aim - p.flashSpread, p.aim + p.flashSpread);
         mainCtx.closePath();
         mainCtx.fill();
+        // Huzme içinde süzülen toz zerreleri
+        const motes = q === 'high' ? 46 : q === 'medium' ? 22 : 0;
+        for (let i = 0; i < motes; i++) {
+          const h1 = hash(i * 12.9898);
+          const h2 = hash(i * 78.233);
+          const h3 = hash(i * 39.425);
+          const d = range * (0.12 + 0.82 * ((h1 + t * (0.01 + h3 * 0.02)) % 1));
+          const a = p.aim + p.flashSpread * (h2 * 2 - 1) * 0.9 + Math.sin(t * 0.7 + i) * 0.02;
+          const x = hp.x + Math.cos(a) * d;
+          const y = hp.y + Math.sin(a) * d + Math.sin(t * (0.6 + h3) + i * 2) * 6;
+          const tw = 0.5 + 0.5 * Math.sin(t * (1.5 + h1 * 2) + i);
+          const al = (1 - d / range) * 0.55 * tw;
+          mainCtx.fillStyle = `rgba(255,240,210,${al})`;
+          mainCtx.fillRect(x, y, 1.6 + h3 * 1.4, 1.6 + h3 * 1.4);
+        }
+        // Fenerin ağzındaki parlama
+        const sg = mainCtx.createRadialGradient(hp.x, hp.y, 0, hp.x, hp.y, 22);
+        sg.addColorStop(0, 'rgba(255,250,230,0.55)');
+        sg.addColorStop(1, 'rgba(255,250,230,0)');
+        mainCtx.fillStyle = sg;
+        mainCtx.fillRect(hp.x - 22, hp.y - 22, 44, 44);
         if (clipped2) mainCtx.restore();
+      }
+      // Bekçi fenerleri: soğuk beyaz huzme
+      for (const r of scene.residents) {
+        if (!r.isGuard || r.state === 'knocked') continue;
+        const gx = r.x + r.facing * 34;
+        const gy = r.y - 25;
+        const a0 = r.facing > 0 ? 0.05 : Math.PI - 0.05;
+        const g = mainCtx.createRadialGradient(gx, gy, 4, gx, gy, 460);
+        g.addColorStop(0, 'rgba(220,235,255,0.2)');
+        g.addColorStop(1, 'rgba(220,235,255,0)');
+        mainCtx.fillStyle = g;
+        mainCtx.beginPath();
+        mainCtx.moveTo(gx, gy);
+        mainCtx.arc(gx, gy, 460, a0 - 0.3, a0 + 0.3);
+        mainCtx.closePath();
+        mainCtx.fill();
       }
       if (hl > 0) {
         for (const room of W.rooms) {
@@ -223,16 +285,37 @@
           g.addColorStop(1, 'rgba(255,220,150,0)');
           mainCtx.fillStyle = g;
           mainCtx.fillRect(l.x - 220, l.y - 204, 440, 440);
+          // Abajurdan aşağı inen sıcak ışık konisi
+          const fy = room.y1;
+          const cg = mainCtx.createLinearGradient(0, l.y + 20, 0, fy);
+          cg.addColorStop(0, `rgba(255,214,140,${0.12 * hl})`);
+          cg.addColorStop(1, 'rgba(255,214,140,0)');
+          mainCtx.fillStyle = cg;
+          mainCtx.beginPath();
+          mainCtx.moveTo(l.x - 18, l.y + 20);
+          mainCtx.lineTo(l.x + 18, l.y + 20);
+          mainCtx.lineTo(l.x + 200, fy);
+          mainCtx.lineTo(l.x - 200, fy);
+          mainCtx.closePath();
+          mainCtx.fill();
         }
       }
       for (const lamp of W.lamps) {
         if (lamp.kind === 'ceiling') continue;
         if (lamp.x + lamp.r < view.x || lamp.x - lamp.r > view.x + view.w) continue;
         const g = mainCtx.createRadialGradient(lamp.x, lamp.y, 2, lamp.x, lamp.y, lamp.r * 0.6);
-        g.addColorStop(0, U.rgba(lamp.color, 0.12));
+        g.addColorStop(0, U.rgba(lamp.color, 0.16));
         g.addColorStop(1, U.rgba(lamp.color, 0));
         mainCtx.fillStyle = g;
         mainCtx.fillRect(lamp.x - lamp.r, lamp.y - lamp.r, lamp.r * 2, lamp.r * 2);
+        // Ampul parlaması (bloom)
+        const fl = 0.9 + Math.sin(t * 7 + lamp.x) * 0.06;
+        const bg = mainCtx.createRadialGradient(lamp.x, lamp.y, 0, lamp.x, lamp.y, 34);
+        bg.addColorStop(0, U.rgba(lamp.color, 0.55 * fl));
+        bg.addColorStop(0.35, U.rgba(lamp.color, 0.18 * fl));
+        bg.addColorStop(1, U.rgba(lamp.color, 0));
+        mainCtx.fillStyle = bg;
+        mainCtx.fillRect(lamp.x - 34, lamp.y - 34, 68, 68);
       }
       if (RC.Save.hasPerm('nightvision') && !p.flashOn) {
         const nv = mainCtx.createRadialGradient(p.cx, p.cy, 10, p.cx, p.cy, 330);
@@ -243,6 +326,63 @@
       }
       mainCtx.restore();
     }
+  }
+
+  /** Sinematik son işlem: renk tonlaması, vinyet, film greni (HUD'dan önce) */
+  Lighting.prototype.post = function (ctx, scene, w, h) {
+    const q = RC.Save.settings.quality;
+    const t = scene.time;
+    ctx.save();
+    if (q === 'high') {
+      // Gölgelerde soğuk mavi, ışıklarda sıcak ton (soft-light)
+      ctx.globalCompositeOperation = 'soft-light';
+      const cg = ctx.createLinearGradient(0, 0, 0, h);
+      cg.addColorStop(0, 'rgba(40,70,150,0.3)');
+      cg.addColorStop(1, 'rgba(255,170,110,0.16)');
+      ctx.fillStyle = cg;
+      ctx.fillRect(0, 0, w, h);
+    }
+    // Vinyet
+    ctx.globalCompositeOperation = 'source-over';
+    const r = Math.hypot(w, h) / 2;
+    const vg = ctx.createRadialGradient(w / 2, h / 2, r * 0.45, w / 2, h / 2, r * 1.02);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(0.7, 'rgba(0,0,6,0.22)');
+    vg.addColorStop(1, 'rgba(0,0,6,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, w, h);
+    // Film greni
+    if (q === 'high') {
+      if (!this.grain) this.grain = makeGrain();
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalAlpha = 0.07;
+      const ox = Math.floor(hash(Math.floor(t * 24)) * 128);
+      const oy = Math.floor(hash(Math.floor(t * 24) + 7.3) * 128);
+      ctx.translate(-ox, -oy);
+      ctx.fillStyle = ctx.createPattern(this.grain, 'repeat');
+      ctx.fillRect(0, 0, w + 128, h + 128);
+    }
+    ctx.restore();
+  };
+
+  function makeGrain() {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const img = g.createImageData(128, 128);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.random() * 255;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  }
+
+  /** 0..1 arası kararlı sözde rastgele */
+  function hash(n) {
+    const x = Math.sin(n) * 43758.5453;
+    return x - Math.floor(x);
   }
 
   function radial(ctx, x, y, r, a) {

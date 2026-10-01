@@ -61,14 +61,33 @@
   }
 
   /* --------------------------- yardımcılar --------------------------- */
+  /** Uzuv: dış hat + ana renk + ışık tarafında parlak şerit (silindir hissi) */
   function limb(ctx, x1, y1, x2, y2, w, col) {
-    ctx.strokeStyle = col;
-    ctx.lineWidth = w;
+    const seg = (lw, c, ox = 0, oy = 0) => {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(x1 + ox, y1 + oy);
+      ctx.lineTo(x2 + ox, y2 + oy);
+      ctx.stroke();
+    };
     ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
+    seg(w + 1.3, OUT);
+    seg(w, col);
+    if (/^#[0-9a-f]{6}$/i.test(col)) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const l = Math.hypot(dx, dy) || 1;
+      let nx = -dy / l;
+      let ny = dx / l;
+      // Işık önden-yukarıdan gelir: normali o yöne çevir
+      if (nx - ny < 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+      seg(w * 0.3, U.rgba(U.shade(col, 0.4), 0.6), nx * w * 0.22, ny * w * 0.22);
+      seg(w * 0.25, U.rgba(U.shade(col, -0.35), 0.45), -nx * w * 0.3, -ny * w * 0.3);
+    }
   }
 
   /** İki kemikli ters kinematik: omuzdan ele, dirsek yönü bend (+1 aşağı/geri) */

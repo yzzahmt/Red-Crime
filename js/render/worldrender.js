@@ -76,11 +76,15 @@
     // Ev: çatı ve dış cephe
     drawRoof(ctx, W, t);
 
-    // Odalar
+    // Odalar (önbellek ekran çözünürlüğünde; uzaktaki odaların önbelleği bırakılır)
+    const res = U.cacheRes(2);
     for (const room of W.rooms) {
-      if (room.x1 < view.x || room.x0 > view.x + view.w || room.y1 < view.y || room.y0 > view.y + view.h) continue;
-      if (!room.cache) room.cache = buildRoomCache(room, W);
-      ctx.drawImage(room.cache, room.x0, room.y0);
+      if (room.x1 < view.x || room.x0 > view.x + view.w || room.y1 < view.y || room.y0 > view.y + view.h) {
+        if (room.cache && (room.x1 < view.x - view.w * 1.5 || room.x0 > view.x + view.w * 2.5 || room.y1 < view.y - view.h * 1.5 || room.y0 > view.y + view.h * 2.5)) room.cache = null;
+        continue;
+      }
+      if (!room.cache || room.cache.res !== res) room.cache = buildRoomCache(room, W, res);
+      ctx.drawImage(room.cache, room.x0, room.y0, room.cache.lw, room.cache.lh);
       // Tavan lambası
       drawCeilingLamp(ctx, room, scene.lightsOn, t);
       if (RC.Decor) RC.Decor.live(ctx, scene, room, t);
@@ -529,13 +533,17 @@
   /* =====================================================================
    * Oda arka planı (önbellek)
    * =================================================================== */
-  function buildRoomCache(room, W) {
+  function buildRoomCache(room, W, res = 1) {
     const w = Math.ceil(room.x1 - room.x0);
     const h = Math.ceil(room.y1 - room.y0);
     const c = document.createElement('canvas');
-    c.width = w;
-    c.height = h;
+    c.width = Math.ceil(w * res);
+    c.height = Math.ceil(h * res);
+    c.lw = w;
+    c.lh = h;
+    c.res = res;
     const ctx = c.getContext('2d');
+    ctx.scale(res, res);
     const base = room.wall;
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
@@ -689,14 +697,47 @@
       ctx.lineWidth = 5;
       U.line(ctx, 0, 46, w, 46);
     }
-    // Kenar gölgeleri
+    // Ortam kapanması (ambient occlusion): tavan altı, köşeler ve zemin birleşimi
+    // koyulaşır; duvarın ortası hafifçe aydınlık kalır. Oda derinlik kazanır.
     const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, 'rgba(0,0,0,0.25)');
-    g.addColorStop(0.2, 'rgba(0,0,0,0)');
-    g.addColorStop(0.85, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.2)');
+    g.addColorStop(0, 'rgba(0,0,0,0.42)');
+    g.addColorStop(0.16, 'rgba(0,0,0,0.08)');
+    g.addColorStop(0.3, 'rgba(0,0,0,0)');
+    g.addColorStop(0.8, 'rgba(0,0,0,0)');
+    g.addColorStop(0.95, 'rgba(0,0,0,0.18)');
+    g.addColorStop(1, 'rgba(0,0,0,0.32)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
+    for (const side of [0, 1]) {
+      const sx = side ? w : 0;
+      const sg = ctx.createLinearGradient(sx, 0, side ? w - 46 : 46, 0);
+      sg.addColorStop(0, 'rgba(0,0,0,0.38)');
+      sg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sg;
+      ctx.fillRect(side ? w - 46 : 0, 0, 46, h);
+    }
+    const glow = ctx.createRadialGradient(w / 2, h * 0.35, 10, w / 2, h * 0.35, Math.max(w, h) * 0.7);
+    glow.addColorStop(0, 'rgba(255,255,255,0.05)');
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    // Tavan pervazı
+    const isHex = /^#[0-9a-f]{6}$/i.test(base);
+    const trim = isHex ? U.mix(base, '#ffffff', 0.18) : 'rgba(255,255,255,0.18)';
+    ctx.fillStyle = trim;
+    ctx.fillRect(0, 0, w, 5);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(0, 5, w, 2);
+    // Süpürgelik: üstte ince parlama, altında temas gölgesi
+    if (room.k !== -1 || room.type === 'treasure' || room.type === 'game') {
+      const bh = 12;
+      ctx.fillStyle = isHex ? U.mix(base, '#000000', 0.45) : 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0, h - bh, w, bh);
+      ctx.fillStyle = 'rgba(255,255,255,0.13)';
+      ctx.fillRect(0, h - bh, w, 1.5);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, h - bh - 2, w, 2);
+    }
     return c;
   }
 

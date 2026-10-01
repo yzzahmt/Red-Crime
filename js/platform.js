@@ -23,6 +23,12 @@
       if (this.desktop) window.RCDesktop.quit();
       else if (plugins.App) plugins.App.exitApp();
     },
+    /** Dış bağlantıyı sistem tarayıcısında aç (oyun penceresi yerinde kalır) */
+    openURL(url) {
+      if (this.desktop && window.RCDesktop.openURL) window.RCDesktop.openURL(url);
+      else if (native) window.location.href = url; // Capacitor dış adresi sistem tarayıcısına yollar
+      else window.open(url, '_blank', 'noopener');
+    },
     init() {
       if (!native) return;
       document.documentElement.classList.add('native');

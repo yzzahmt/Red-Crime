@@ -114,6 +114,100 @@
   RC.MenuBG = MenuBG;
 
   /* =====================================================================
+   * "Diğer ürünlerimiz" kartı: yazify.net'i sistem tarayıcısında açar.
+   * Cam görünümlü koyu kart, renk dolaşan kenarlık, uygulama ızgarası simgesi.
+   * =================================================================== */
+  const PRODUCTS_URL = 'https://www.yazify.net';
+
+  class ProductsButton extends UI.Widget {
+    activate() {
+      this.pressT = 0.15;
+      RC.Audio.play('uiSelect');
+      RC.Platform.openURL(PRODUCTS_URL);
+    }
+    draw(ctx, t) {
+      const h = this.hoverT;
+      const s = 1 + h * 0.035 - (this.pressT > 0 ? 0.03 : 0);
+      const W = this.w;
+      const H = this.h;
+      ctx.save();
+      ctx.translate(this.x + W / 2, this.y + H / 2);
+      ctx.scale(s, s);
+      const x = -W / 2;
+      const y = -H / 2;
+      const r = H / 2;
+      // Parıltı
+      ctx.shadowColor = U.mix('#ff3043', '#ffc83d', 0.5 + Math.sin(t * 2) * 0.5);
+      ctx.shadowBlur = 10 + h * 22;
+      const bg = ctx.createLinearGradient(x, y, x + W, y + H);
+      bg.addColorStop(0, U.mix('#1d1533', '#2a1d48', h));
+      bg.addColorStop(1, U.mix('#0b0a18', '#140f28', h));
+      ctx.fillStyle = bg;
+      U.fillRoundRect(ctx, x, y, W, H, r);
+      ctx.shadowBlur = 0;
+      // Renk dolaşan kenarlık
+      const off = (t * 0.35) % 1;
+      const bd = ctx.createLinearGradient(x - W, 0, x + W * 2, 0);
+      const cols = ['#ff3043', '#ffc83d', '#a46bff', '#ff3043'];
+      for (let k = 0; k < 4; k++) bd.addColorStop(U.clamp01(k / 3 * 0.66 + off * 0.34), cols[k]);
+      ctx.strokeStyle = bd;
+      ctx.lineWidth = 2 + h;
+      U.strokeRoundRect(ctx, x + 1, y + 1, W - 2, H - 2, r - 1);
+      // Işık süpürmesi: ara sıra kendiliğinden, üzerine gelince sürekli
+      const cyc = h > 0.05 ? (t * 1.4) % 1.6 : (t % 4.5) / 1.2;
+      if (cyc < 1.3) {
+        ctx.save();
+        ctx.beginPath();
+        U.roundRect(ctx, x, y, W, H, r);
+        ctx.clip();
+        const sx = x - 80 + cyc * (W + 160);
+        const lg = ctx.createLinearGradient(sx - 50, 0, sx + 50, 0);
+        lg.addColorStop(0, 'rgba(255,255,255,0)');
+        lg.addColorStop(0.5, 'rgba(255,255,255,0.16)');
+        lg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = lg;
+        ctx.fillRect(x, y, W, H);
+        ctx.restore();
+      }
+      // Uygulama ızgarası simgesi
+      const ix = x + 14;
+      const iy = -18;
+      const tile = ctx.createLinearGradient(ix, iy, ix + 36, iy + 36);
+      tile.addColorStop(0, '#ff4458');
+      tile.addColorStop(1, '#8a0f2a');
+      ctx.fillStyle = tile;
+      U.fillRoundRect(ctx, ix, iy, 36, 36, 10);
+      const dots = ['#ffffff', '#ffc83d', '#ffc83d', '#ffffff'];
+      for (let k = 0; k < 4; k++) {
+        const pulse = 1 + Math.max(0, Math.sin(t * 3 - k * 0.8)) * 0.18 * (0.4 + h);
+        const dx = ix + 11 + (k % 2) * 14;
+        const dy = iy + 11 + Math.floor(k / 2) * 14;
+        const z = 5 * pulse;
+        U.fillRoundRect(ctx, dx - z, dy - z, z * 2, z * 2, 3, dots[k]);
+      }
+      // Yazılar
+      D.text(ctx, RC.L('DİĞER ÜRÜNLERİMİZ'), x + 62, -2, { size: 15, font: C.FONT_TITLE, color: '#ffffff', shadow: 'rgba(0,0,0,0.5)' });
+      D.text(ctx, 'yazify.net', x + 62, 15, { size: 12, weight: 'bold', color: U.mix('#c9a24a', '#ffc83d', h) });
+      // Ok (↗): üzerine gelince dışarı fırlar
+      const ax = x + W - 26 + h * 3;
+      const ay = 0 - h * 3;
+      U.circle(ctx, x + W - 26, 0, 15, U.rgba('#ffffff', 0.08 + h * 0.12));
+      ctx.strokeStyle = U.mix('#dfe3f5', '#ffc83d', h);
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(ax - 5, ay + 5);
+      ctx.lineTo(ax + 5, ay - 5);
+      ctx.moveTo(ax - 2, ay - 5);
+      ctx.lineTo(ax + 5, ay - 5);
+      ctx.lineTo(ax + 5, ay + 2);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+      ctx.restore();
+    }
+  }
+
+  /* =====================================================================
    * ANA MENÜ
    * =================================================================== */
   RC.Scenes.menu = {
@@ -154,6 +248,7 @@
           this.menu.focus = RC.IAP && RC.IAP.supported ? 4 : 3;
         }),
         ...(RC.Platform.canQuit ? [mk('ÇIKIŞ', 'cross', () => RC.Platform.quit())] : []),
+        new ProductsButton({ x: w - 300, y: h - 82, w: 280, h: 60 }),
       ]);
       this.menu.focus = focus;
     },
@@ -178,7 +273,7 @@
       D.panel(ctx, 20, h - 64, 280, 46, { r: 10 });
       D.icon(ctx, 'money', 44, h - 41, 22, C.COLORS.gold);
       D.text(ctx, U.formatMoney(p.wallet), 64, h - 34, { size: 20, font: C.FONT_TITLE, color: C.COLORS.gold });
-      D.text(ctx, 'v1.0 · ' + ({ win32: 'Windows', darwin: 'macOS', linux: 'Linux', android: 'Android', ios: 'iOS' }[RC.Platform.os] || 'Web'), w - 20, h - 24, { size: 12, align: 'right', color: '#5a6284' });
+      D.text(ctx, 'v1.0 · ' + ({ win32: 'Windows', darwin: 'macOS', linux: 'Linux', android: 'Android', ios: 'iOS' }[RC.Platform.os] || 'Web'), w - 24, h - 92, { size: 12, align: 'right', color: '#5a6284' });
       if (!RC.Touch.active) D.text(ctx, '↑↓ seç · ENTER onayla', w / 2, h - 24, { size: 13, align: 'center', color: '#5a6284' });
     },
   };

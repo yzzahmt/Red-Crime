@@ -1,5 +1,5 @@
 /* RED CRIME - Masaüstü (Electron) giriş noktası: Steam için Windows / macOS / Linux */
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const path = require('path');
 
 // Steam katmanı (overlay) ve Linux uyumluluğu
@@ -52,6 +52,11 @@ function createWindow() {
 
 ipcMain.on('rc:quit', () => app.quit());
 ipcMain.on('rc:fullscreen', () => win && win.setFullScreen(!win.isFullScreen()));
+// Yalnızca kendi sitemiz sistem tarayıcısında açılabilir
+const EXTERNAL_OK = /^https:\/\/(www\.)?yazify\.net(\/|$)/;
+ipcMain.on('rc:open', (e, url) => {
+  if (typeof url === 'string' && EXTERNAL_OK.test(url)) shell.openExternal(url);
+});
 
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => app.quit());
