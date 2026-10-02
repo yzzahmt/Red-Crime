@@ -244,6 +244,26 @@
         D.icon(ctx, r[0], ix, py + 25 + j * 24, 16, C.COLORS.gold);
         D.text(ctx, r[1], ix + 16, py + 30 + j * 24, { size: 14, color: '#f2f4ff' });
       });
+      // Özel zorluklar: renkli etiketler (açıklamanın altında)
+      const mods = RC.Hazards.list(cfg);
+      if (mods.length) {
+        let mx = px + 20;
+        const my = py + ph - 34;
+        D.text(ctx, RC.L('ÖZEL ZORLUK'), mx, my + 17, { size: 12, color: '#9aa3c7', weight: 'bold' });
+        mx += 86;
+        ctx.font = `bold 13px ${C.FONT_UI}`;
+        for (const m of mods) {
+          const label = RC.L(m.name).toUpperCase();
+          const tw = ctx.measureText(label).width + 34;
+          ctx.fillStyle = U.rgba(m.color, 0.14);
+          ctx.fillRect(mx, my, tw, 24);
+          ctx.fillStyle = m.color;
+          ctx.fillRect(mx, my, 3, 24);
+          D.icon(ctx, m.icon, mx + 14, my + 12, 13, m.color);
+          D.text(ctx, label, mx + 24, my + 17, { size: 13, color: m.color, weight: 'bold' });
+          mx += tw + 8;
+        }
+      }
       this.menu.draw(ctx, t);
       if (this.lockMsg) {
         const a = Math.min(1, this.lockMsg.t * 2);

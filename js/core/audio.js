@@ -401,6 +401,51 @@
       });
     },
 
+    /** Helikopter rotoru: alçak geçiren gürültü, ~13 Hz'de genlik modülasyonu (pat-pat-pat) */
+    heliLoop() {
+      this.startLoop('heli', (A) => {
+        const c = A.ctx;
+        const src = c.createBufferSource();
+        src.buffer = A.noiseBuf;
+        src.loop = true;
+        const f = c.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 380;
+        const am = c.createGain();
+        am.gain.value = 0.5;
+        const lfo = c.createOscillator();
+        lfo.type = 'square';
+        lfo.frequency.value = 13;
+        const lfoG = c.createGain();
+        lfoG.gain.value = 0.45;
+        lfo.connect(lfoG);
+        lfoG.connect(am.gain);
+        const hum = c.createOscillator();
+        hum.type = 'sawtooth';
+        hum.frequency.value = 52;
+        const humG = c.createGain();
+        humG.gain.value = 0.15;
+        hum.connect(humG);
+        humG.connect(f);
+        const g = c.createGain();
+        g.gain.value = 0.0001;
+        src.connect(f);
+        f.connect(am);
+        am.connect(g);
+        g.connect(A.sfxGain);
+        src.start();
+        lfo.start();
+        hum.start();
+        return {
+          gain: g,
+          nodes: [src, lfo, hum],
+          set(pr) {
+            if (pr.vol != null) g.gain.setTargetAtTime(Math.max(0.0001, pr.vol * 0.4), c.currentTime, 0.25);
+          },
+        };
+      });
+    },
+
     rainLoop() {
       this.startLoop('rain', (A) => {
         const c = A.ctx;

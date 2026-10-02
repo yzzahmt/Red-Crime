@@ -159,6 +159,20 @@
       this.scene.onResidentWake(this);
     }
 
+    /** Uykusuz sakin: alarm vermeden kalkar, bir odaya gidip bakınır, yatağına döner */
+    nightWalk() {
+      if (this.state !== 'sleep' || this.isGuard) return;
+      const all = this.scene.world.rooms;
+      const rooms = all.filter((r) => r !== this.room && r.k >= 0);
+      const room = U.pick(rooms.length ? rooms : all);
+      this.state = 'waking';
+      this.stateT = 0;
+      this.stroll = true;
+      this.sweepDone = true; // bakınma bitince bütün evi taramaz, yatağına döner
+      this.pending = { x: (room.x0 + room.x1) / 2 + U.rand(-60, 60), k: room.k };
+      this.say(U.pick(C.LINES.stroll), 2);
+    }
+
     investigate(x, k) {
       this.state = 'investigate';
       this.stateT = 0;
@@ -277,7 +291,7 @@
       }
       this.state = 'return';
       this.stateT = 0;
-      this.say(U.pick(C.LINES.giveUp), 2.2);
+      this.say(U.pick(this.stroll ? C.LINES.strollEnd : C.LINES.giveUp), 2.2);
       this.setMark(null);
       this.setTarget(this.room.k, this.bedX);
     }
@@ -285,6 +299,7 @@
     goToSleep() {
       this.state = 'sleep';
       this.stateT = 0;
+      this.stroll = false;
       this.x = this.bedX;
       this.wake = Math.min(50, 10 + this.timesWoken * 10);
       this.alertness = Math.min(1.8, this.alertness * 1.15);
@@ -508,6 +523,9 @@
       if (outdoors && scene.nearOutdoorLight(pcx, pcy)) range += 140;
       if (p.flashOn) range += 200;
       if (this.isGuard) range += 200; // el feneri
+      else if (scene.mods && scene.mods.blackout) range += 90; // telefon feneri
+      // Şimşek çaktığında ev bir anlığına gün gibi aydınlanır
+      if ((scene.lightning || 0) > 0.4) range = Math.max(range, 640 * this.diff.sight);
       if (p.crouch) range *= 0.7;
       if (this.state === 'chase') range *= 1.3;
       if (d > range) return false;
@@ -557,8 +575,9 @@
         }
         case 'waking': {
           if (this.stateT > 1.5) {
-            this.x = this.bed.x + this.bed.w + 20;
+            this.x = this.bed ? this.bed.x + this.bed.w + 20 : this.x;
             this.investigate(this.pending.x, this.pending.k);
+            if (this.stroll) this.setMark(null); // gece yürüyüşü: şüphe işareti yok
           }
           break;
         }

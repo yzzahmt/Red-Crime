@@ -456,7 +456,7 @@
             closed: false,
             locked: false,
             openT: 1,
-            lockLevel: 1 + Math.floor(levelIndex / 3),
+            lockLevel: Math.min(8, 1 + Math.floor(levelIndex / 3)),
             swing: 1,
           };
           door.body = addSolid(bx - 6, f.y - door.h, 12, door.h, { kind: 'door', door, type: 'none' });
@@ -509,7 +509,7 @@
         locked: true,
         exterior: true,
         openT: 0,
-        lockLevel: 1 + Math.floor(levelIndex / 3),
+        lockLevel: Math.min(8, 1 + Math.floor(levelIndex / 3)),
         swing: 1,
       };
       fd.body = addSolid(houseX, -C.DOOR_H, WALL, C.DOOR_H, { kind: 'door', door: fd, type: 'solid' });

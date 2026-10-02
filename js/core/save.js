@@ -30,8 +30,8 @@
       },
       progress: {
         unlocked: 1,
-        best: new Array(15).fill(0),
-        stars: new Array(15).fill(0),
+        best: new Array(RC.Config.LEVELS.length).fill(0),
+        stars: new Array(RC.Config.LEVELS.length).fill(0),
         wallet: 0,
         totalStolen: 0,
         itemsStolen: 0,
@@ -39,9 +39,10 @@
         heists: 0,
         safesOpened: 0,
         upgrades: { shoes: 0, flashlight: 0, bag: 0, strength: 0, safecracker: 0, lungs: 0 },
-        seenBriefing: new Array(15).fill(false),
+        seenBriefing: new Array(RC.Config.LEVELS.length).fill(false),
         tutorialDone: false,
         finalAttempts: 0,
+        finalLevel: RC.Config.LEVELS.length, // hangi bölümün final olduğu (kayıt göçü için)
         gameCompleted: false,
         discountCode: null,
         gadgets: { lockpick: 0, jammer: 0, sleepgas: 0, smoke: 0, emp: 0, pistol: 0 },
@@ -69,6 +70,18 @@
           for (const k of ['best', 'stars', 'seenBriefing']) {
             while (p[k].length < d[k].length) p[k].push(d[k][p[k].length]);
           }
+          // 30 bölüm: final 15. sıradan sona taşındı. Eski finalin rekoru yeni 15. bölüme
+          // (Liman) geçmesin; eski finalde harcanan haklar yeni final için sıfırlansın.
+          if (!parsed.progress || parsed.progress.finalLevel == null) {
+            const old = 14;
+            if (p.stars[old] > 0 || (p.finalAttempts || 0) > 0) {
+              p.stars[old] = 0;
+              p.best[old] = 0;
+              p.seenBriefing[old] = false;
+            }
+            p.finalAttempts = 0;
+          }
+          p.finalLevel = RC.Config.LEVELS.length;
         }
       } catch (e) {
         this.available = false;

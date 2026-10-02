@@ -34,7 +34,7 @@
     }
 
     update(dt, scene) {
-      const target = scene.lightsOn ? 1 : 0;
+      const target = scene.lightsOn && !(scene.mods && scene.mods.blackout) ? 1 : 0;
       if (target > this.houseLight) {
         // Floresan gibi titreyerek yanma
         this.flicker += dt;
@@ -67,18 +67,26 @@
         if (!RC.Physics.lineOfSight(W.grid, ox, oy, hp.x, hp.y)) this.pCone.pts = [hp.x, hp.y];
       }
       this.gCones = [];
+      const blackout = scene.mods && scene.mods.blackout;
       for (const r of scene.residents) {
-        if (!r.isGuard || r.state === 'knocked') continue;
-        const gx = r.x + r.facing * 34;
-        const gy = r.y - 25;
-        const a0 = r.facing > 0 ? 0.05 : Math.PI - 0.05;
-        this.gCones.push({ x: gx, y: gy, pts: RC.Physics.castCone(W.grid, gx, gy, a0, 0.3, 460, Math.round(rays / 2)).slice() });
+        if (r.state === 'knocked') continue;
+        // Bekçi feneri; elektrik kesintisinde uyanık sakinlerin telefon feneri
+        const phone = !r.isGuard && blackout && r.awake && r.state !== 'waking';
+        if (!r.isGuard && !phone) continue;
+        const gx = r.x + r.facing * (phone ? 18 : 34);
+        const gy = r.y - (phone ? 45 : 25);
+        const a0 = r.facing > 0 ? 0.08 : Math.PI - 0.08;
+        const range = phone ? 320 : 460;
+        this.gCones.push({ x: gx, y: gy, range, phone, pts: RC.Physics.castCone(W.grid, gx, gy, a0, phone ? 0.36 : 0.3, range, Math.round(rays / 2)).slice() });
       }
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
       ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      const darkness = scene.weather === 'fog' ? 0.86 : 0.87;
+      let darkness = scene.weather === 'fog' ? 0.86 : 0.87;
+      if (scene.mods && scene.mods.blackout) darkness = 0.92;
+      // Şimşek: bir anlığına her yer aydınlanır
+      darkness *= 1 - 0.85 * (scene.lightning || 0);
       // Gece mavisi karanlık (gri yerine ay ışığı tonu)
       ctx.fillStyle = `rgba(4,7,24,${darkness})`;
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -131,9 +139,12 @@
         }
       }
 
-      // Lambalar (sokak, bahçe, şömine)
+      // Helikopter ışıldağı
+      RC.Hazards.cutDarkness(ctx, scene, radial);
+
+      // Lambalar (sokak, bahçe, şömine) — elektrik kesintisinde sönük
       for (const lamp of W.lamps) {
-        if (lamp.kind === 'ceiling') continue;
+        if (lamp.kind === 'ceiling' || blackout) continue;
         if (lamp.x + lamp.r < view.x || lamp.x - lamp.r > view.x + view.w) continue;
         const fl = 0.85 + Math.sin(t * 7 + lamp.x) * 0.05;
         radial(ctx, lamp.x, lamp.y, lamp.r, 0.8 * fl);
@@ -186,7 +197,7 @@
         if (r.state !== 'sleep') radial(ctx, r.x, r.y - 30, 70, 0.35);
       }
       for (const gc of this.gCones) {
-        const g = ctx.createRadialGradient(gc.x, gc.y, 4, gc.x, gc.y, 460);
+        const g = ctx.createRadialGradient(gc.x, gc.y, 4, gc.x, gc.y, gc.range);
         g.addColorStop(0, 'rgba(0,0,0,0.95)');
         g.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = g;
@@ -291,8 +302,8 @@
       }
       // Bekçi fenerleri: soğuk beyaz huzme
       for (const gc of this.gCones) {
-        const g = mainCtx.createRadialGradient(gc.x, gc.y, 4, gc.x, gc.y, 460);
-        g.addColorStop(0, 'rgba(220,235,255,0.2)');
+        const g = mainCtx.createRadialGradient(gc.x, gc.y, 4, gc.x, gc.y, gc.range);
+        g.addColorStop(0, gc.phone ? 'rgba(235,240,255,0.16)' : 'rgba(220,235,255,0.2)');
         g.addColorStop(1, 'rgba(220,235,255,0)');
         mainCtx.fillStyle = g;
         conePath(mainCtx, gc);
@@ -323,7 +334,7 @@
         }
       }
       for (const lamp of W.lamps) {
-        if (lamp.kind === 'ceiling') continue;
+        if (lamp.kind === 'ceiling' || (scene.mods && scene.mods.blackout)) continue;
         if (lamp.x + lamp.r < view.x || lamp.x - lamp.r > view.x + view.w) continue;
         const g = mainCtx.createRadialGradient(lamp.x, lamp.y, 2, lamp.x, lamp.y, lamp.r * 0.6);
         g.addColorStop(0, U.rgba(lamp.color, 0.16));
@@ -401,6 +412,12 @@
       cg.addColorStop(0, 'rgba(30,60,140,0.38)');
       cg.addColorStop(1, 'rgba(255,160,100,0.14)');
       ctx.fillStyle = cg;
+      ctx.fillRect(0, 0, w, h);
+    }
+    // Şimşek flaşı
+    if ((scene.lightning || 0) > 0) {
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = `rgba(200,215,255,${0.45 * scene.lightning})`;
       ctx.fillRect(0, 0, w, h);
     }
     // Tehlike: görüntü kırmızıya döner

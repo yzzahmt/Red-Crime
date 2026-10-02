@@ -233,7 +233,7 @@
         cam.sees = sees;
         if (sees) {
           const before = cam.detect;
-          cam.detect += dt * (1.3 + scene.levelIndex * 0.06);
+          cam.detect += dt * (1.3 + Math.min(scene.levelIndex, 18) * 0.06);
           if (before === 0) RC.Audio.play('beep', { x: cam.x, y: cam.y, vol: 0.8, pitch: 1.4 });
           if (Math.floor(before * 6) !== Math.floor(cam.detect * 6)) RC.Audio.play('beep', { x: cam.x, y: cam.y, vol: 0.6, pitch: 1.2 + cam.detect });
           if (cam.detect >= 1) {
@@ -341,7 +341,7 @@
       RC.Audio.play('alarm', { vol: 1 });
       RC.Audio.play('siren', { vol: 0.8 });
       scene.camera.shake(0.4);
-      scene.lightsOn = true;
+      if (!(scene.mods && scene.mods.blackout)) scene.lightsOn = true;
       const k = scene.floorOf(y);
       for (const r of scene.residents) {
         if (r.state === 'sleep') r.wakeUp(x, k);

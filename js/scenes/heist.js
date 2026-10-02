@@ -66,6 +66,7 @@
       this.resetRunState();
       this.time = 0;
       this.timeLeft = C.heistTime(lvl) * this.diff.time + (RC.Save.hasPerm('bribe') ? 45 : 0) + RC.Premium.time;
+      if (cfg.mods && cfg.mods.tight) this.timeLeft = Math.round(this.timeLeft * 0.72);
       this.totalTime = this.timeLeft;
       this.loaded = [];
       this.loadedValue = 0;
@@ -78,6 +79,7 @@
       this.policeT = 0;
       this.sirenT = 0;
       this.dangerLevel = 0;
+      RC.Hazards.init(this);
       this.heartT = 0;
       this.prompts = [];
       this.creakFlash = 0;
@@ -139,6 +141,7 @@
     exit() {
       RC.Audio.stopLoop('engine');
       RC.Audio.stopLoop('rain');
+      RC.Audio.stopLoop('heli');
       this.releaseWorld();
     },
 
@@ -183,6 +186,8 @@
      * ================================================================ */
     makeNoise(x, y, loud, src) {
       if (loud <= 0) return;
+      // Fırtına: gök gürlerken çıkan sesler boğulur
+      if (this.thunderMask > 0 && src !== 'bark') loud *= 0.3;
       this.noiseEvents.push({ x, y, loud, src });
       if (this.heat && src !== 'bark') this.heat.noteNoise(x, y, loud);
       const p = this.player;
@@ -232,7 +237,11 @@
 
     onResidentWake(r) {
       this.stats.woken++;
-      if (!this.lightsOn) {
+      if (this.mods && this.mods.blackout) {
+        // Elektrik yok: ışık yanmaz, telefon feneriyle arar
+        this.toast(RC.L('{n} uyandı! Elektrik yok, fenerle arıyor!', { n: r.displayName }), '#ff8c2e');
+        this.camera.shake(0.15);
+      } else if (!this.lightsOn) {
         this.lightsOn = true;
         RC.Audio.play('lightOn', { x: r.x, y: r.y, vol: 1 });
         this.toast(RC.L('{n} uyandı! Işıklar yandı!', { n: r.displayName }), '#ff8c2e');
@@ -255,6 +264,16 @@
 
     onResidentStir(r, amount) {
       if (amount > 20) this.camera.shake(0.05);
+    },
+
+    onHeliSpotted() {
+      this.stats.spotted++;
+      this.camera.shake(0.3);
+      RC.Audio.play('alarm', { vol: 0.7 });
+      if (!this.policeCalled) {
+        this.callPolice(null, 40, true);
+        this.toast(RC.L('HELİKOPTER SENİ GÖRDÜ! Polis {t} içinde burada!', { t: U.formatTime(this.policeT) }), '#ff3043');
+      }
     },
 
     onSpotted(r) {
@@ -287,6 +306,12 @@
       const br = this.roomAt(this.floorOf(it.y + it.h - 2), it.cx);
       if (br) br.broken = (br.broken || 0) + 1;
       this.toast(RC.L('{n} kırıldı! (-{v})', { n: it.name, v: U.formatMoney(it.value) }), '#ff8fa3');
+      // Hassas sigorta: kırılan her eşya sessiz alarmı polise iletir
+      if (this.mods && this.mods.fragile && !this.policeCalled) {
+        this.callPolice(null, 45, true);
+        this.toast(RC.L('SİGORTA ALARMI! Polis {t} içinde burada!', { t: U.formatTime(this.policeT) }), '#ff3043');
+        RC.Audio.play('alarm', { vol: 0.7 });
+      }
       U.removeFrom(this.world.items, it);
       this.activeItems.delete(it);
       for (const r of this.residents) {
@@ -682,7 +707,7 @@
         }
         if (this.dog && Math.abs(this.dog.x - p.cx) < 900) this.dog.setState('return');
         if (!this.policeCalled) this.callPolice(null, 60);
-        this.lightsOn = true;
+        if (!this.mods.blackout) this.lightsOn = true;
         this.toast(L('Uyarı atışı! Herkes kaçışıyor... ama polis yolda!'), '#ffd24a');
       } else if (id === 'emp') {
         if (this.secDisabled || (!this.world.cameras.length && !this.world.lasers.length && !this.world.panel)) {
@@ -935,6 +960,8 @@
           return;
         }
       }
+
+      RC.Hazards.update(this, dt);
 
       // Kamera
       const followY = p.bodyY - 70;
@@ -1262,6 +1289,7 @@
       cam.apply(ctx);
       this.particles.renderRings(ctx, view);
       RC.Security.drawOverlay(ctx, this, view, t);
+      RC.Hazards.renderWorld(ctx, this, t);
       this.drawThermal(ctx, t);
       for (const r of this.residents) if (r._ov) r.drawOverlay(ctx, t, r._ov.x, r._ov.y);
       if (this.dog) this.dog.drawOverlay(ctx, t);
@@ -1380,6 +1408,23 @@
       D.text(ctx, RC.L('BÖLÜM {n}', { n: this.cfg.id }), w / 2, h / 2 - 28, { size: 16, align: 'center', color: C.COLORS.red, weight: 'bold' });
       D.text(ctx, RC.L(this.cfg.name).toLocaleUpperCase(RC.I18N.lang === 'en' ? 'en-US' : 'tr-TR'), w / 2, h / 2 + 12, { size: 40, font: C.FONT_TITLE, align: 'center', color: '#fff', shadow: true });
       D.text(ctx, RC.L('{t} — Ev sahibini uyandırmadan en çok ganimeti kamyona yükle!', { t: U.formatTime(this.totalTime) }), w / 2, h / 2 + 44, { size: 16, align: 'center', color: '#dfe3f5' });
+      // Özel zorluklar
+      const mods = RC.Hazards.list(this.cfg);
+      if (mods.length) {
+        ctx.font = `bold 14px ${C.FONT_UI}`;
+        const parts = mods.map((m) => RC.L(m.name).toUpperCase());
+        const widths = parts.map((s) => ctx.measureText(s).width + 30);
+        const total = U.sum(widths, (x) => x) + (parts.length - 1) * 10;
+        let x = w / 2 - total / 2;
+        const y = h / 2 + 82;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(x - 12, y - 4, total + 24, 30);
+        mods.forEach((m, i) => {
+          D.icon(ctx, m.icon, x + 10, y + 11, 14, m.color);
+          D.text(ctx, parts[i], x + 22, y + 16, { size: 14, color: m.color, weight: 'bold' });
+          x += widths[i] + 10;
+        });
+      }
       ctx.globalAlpha = 1;
     },
 
