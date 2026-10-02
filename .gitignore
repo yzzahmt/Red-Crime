@@ -2,3 +2,4 @@
 node_modules/
 dist/
 *.aab
+artifact.html
