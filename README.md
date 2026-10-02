@@ -1,107 +1,98 @@
-# RED CRIME
+<p align="center">
+  <img src="assets/logo.png" alt="Red Crime" width="320">
+</p>
 
-2B yandan görünümlü, web tabanlı gizlilik/hırsızlık oyunu. Sokakta yalnızca "Red Crime" diye bilinen hırsızla
-hedefi uyandırmadan, süre dolmadan en değerli ganimeti kamyona yükle.
+<p align="center">
+  <b>A 2D side-view stealth heist game — built from scratch in vanilla JavaScript and Canvas 2D.</b><br>
+  Ships to web, Windows / macOS / Linux (Electron) and Android / iOS (Capacitor) from a single codebase.
+</p>
 
-## Çalıştırma
+<p align="center">
+  <img src="https://img.shields.io/badge/JavaScript-ES2020-f7df1e?logo=javascript&logoColor=black" alt="JavaScript">
+  <img src="https://img.shields.io/badge/Canvas_2D-no_engine-e8283c" alt="Canvas 2D">
+  <img src="https://img.shields.io/badge/Electron-desktop-47848f?logo=electron&logoColor=white" alt="Electron">
+  <img src="https://img.shields.io/badge/Capacitor-Android_%7C_iOS-119eff?logo=capacitor&logoColor=white" alt="Capacitor">
+  <img src="https://img.shields.io/badge/version-1.4-informational" alt="Version 1.4">
+</p>
 
-Tarayıcı güvenliği nedeniyle yerel bir sunucu üzerinden aç:
+---
+
+Sneak into a sleeping household, grab the most valuable loot you can carry and load it onto the truck before the
+timer runs out — without waking anyone up.
+
+## Highlights
+
+- **No engine, no framework.** ~27k lines of hand-written JavaScript: game loop, scene manager, physics, rendering,
+  input and audio are all implemented in-house.
+- **Procedural levels.** Every house is generated from a level config: floors, rooms, stairs, basements, gardens,
+  pools, safes and keys, furnished from 40+ furniture types and 100+ item definitions across multiple visual themes.
+- **Resident & guard AI.** A finite-state machine (`sleep → waking → investigate → search → sweep → chase → return`,
+  plus `patrol` for guards) with multi-floor pathfinding, door handling and a noise-driven wake-up meter.
+  A tracking dog follows the player's scent.
+- **Stealth systems.** Sound propagation, creaky floorboards, flashlight cones and dynamic lighting, security cameras
+  with blind spots, a heat system and lock-breaching minigames (drill, safe dial, lockpick).
+- **Synthesized audio.** Sound effects and music are generated at runtime with the Web Audio API — no audio files.
+- **Two control schemes.** Keyboard + mouse, and a joystick-free, gesture-based touch layer for phones and tablets.
+- **Localization.** Turkish and English with a first-run language picker.
+- **Production-ready mobile build.** AdMob ads, in-app purchases, premium tier and KVKK/GDPR consent flow.
+
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Game | Vanilla JavaScript (IIFE modules), HTML5 Canvas 2D, Web Audio API |
+| Desktop | Electron + electron-builder (Windows x64, macOS universal, Linux AppImage) |
+| Mobile | Capacitor 8 (Android `.aab`, iOS), AdMob, native in-app purchases |
+| Tooling | Node build script (`scripts/build-web.mjs`), Gradle, Xcode |
+
+## Architecture
+
+```
+js/
+├── main.js        game loop and scene manager with fade transitions
+├── core/          config, input, touch gestures, audio synth, save, i18n, monetization
+├── world/         level generator, physics, furniture & item definitions, security, heat
+├── entities/      player, resident / guard AI, dog, items
+├── render/        camera, lighting, particles, backgrounds, character & world rendering
+├── ui/            HUD, mini-map, widgets, minigames, drag-to-loot, tutorial
+└── scenes/        intro, menu, planning, briefing, truck ride, heist, results, store …
+desktop/           Electron main & preload
+android/  ios/     Capacitor native projects
+```
+
+## Getting started
 
 ```bash
-cd RedCrime
-python3 -m http.server 8765
-# tarayıcıda: http://localhost:8765
+python3 -m http.server 8765      # or: npm run serve
+# open http://localhost:8765
 ```
 
-Geliştirici kısayolu: `http://localhost:8765/?scene=heist&level=2` doğrudan 3. bölüme atlar
-(`scene`: splash, intro, menu, settings, howto, levelselect, shop, briefing, truckride, heist, results, busted).
-
-## Kontroller
-
-| Tuş | Eylem |
-| --- | --- |
-| A / D | Yürü |
-| W | Zıpla (el merdiveninde tırman) |
-| S | Çömel (sessiz yürüme, saklanma) |
-| S + W | Platformdan aşağı in |
-| SHIFT | Koş |
-| SPACE | Tut / çuvala at / bırak / kamyona yükle |
-| S + SPACE | Eşyayı sessizce yere koy |
-| Q | Fırlat (dikkat dağıt) |
-| E | Kasayı aç / kamyonla kaç |
-| F | El feneri (fareyle nişan) |
-| M | Harita |
-| ESC | Duraklat |
-
-## Yapı
-
-```
-js/core      utils, config (bölümler, senaryo), input, audio (sentez ses + müzik), save
-js/render    particles, camera, draw (karakterler, ikonlar), backgrounds, truck, worldrender, lighting
-js/world     itemdefs (100+ eşya), furniture (40+ mobilya), physics, levelgen (prosedürel evler)
-js/entities  item, player, resident (ev sahibi yapay zekâsı), dog
-js/ui        widgets (menü bileşenleri), hud (arayüz + mini harita)
-js/scenes    intro, menu/ayarlar/nasıl oynanır, bölüm seçimi + dükkân, köprü brifingi,
-             kamyon yolculuğu, soygun, sonuç + yakalanma
-```
-
-## Dokunmatik kontroller (telefon / tablet)
-
-Joystick yok; ekranın herhangi bir yerinde Limbo tarzı hareketler:
-
-| Hareket | Eylem |
-| --- | --- |
-| Sağa / sola kaydır ve tut | Yürü (aynı yöne uzun kaydır: koş) |
-| Yukarı fırlat | Zıpla (merdivende tut: tırman) |
-| Aşağı kaydır ve tut | Çömel · aşağı sonra yukarı: platformdan in |
-| Dokun | Bağlama göre al / çuvala at / bırak / yükle / aç / kaç |
-| Basılı tut | Eşya elindeyse fırlat, değilse el feneri |
-| İkinci parmakla dokun | Hareket ederken eylem (çömelip dokun: sessizce koy) |
-| Mini haritaya basılı tut · sağ üst ⏸ | Büyük harita · duraklat |
-
-Kod: `js/core/touch.js`. Sahneler `touchGestures / touchTap / touchLongPress / touchButtons` ile bağlanır.
-
-## Masaüstü (Steam: Windows · macOS · Linux)
+Jump straight to a scene while developing: `http://localhost:8765/?scene=heist&level=2`
 
 ```bash
 npm install
-npm run desktop       # pencerede dene
-npm run dist:win      # dist/desktop/win-unpacked   → Steam deposu, çalıştırılabilir: "Red Crime.exe"
-npm run dist:mac      # dist/desktop/mac-universal  → "Red Crime.app" (Intel + Apple Silicon)
-npm run dist:linux    # dist/desktop/linux-unpacked → "red-crime" (+ AppImage, tar.gz; Ubuntu, Arch, SteamOS...)
+npm run desktop          # run the desktop build in a window
+npm run dist:win         # / dist:mac / dist:linux — packaged desktop builds
+npm run android          # sync web assets and open Android Studio
+npm run android:bundle   # signed release .aab for Google Play
+npm run ios              # open in Xcode
 ```
 
-Steam'e her platformun `*-unpacked` / `mac-universal` klasörünü ayrı depot olarak yükle.
-macOS'ta Gatekeeper uyarısı olmaması için Apple Developer sertifikasıyla imzalayıp noter onayı (notarize) al
-(`package.json` → `build.mac.identity`). F11 / Alt+Enter: tam ekran, `--windowed`: pencere modu.
+Release, signing and store setup: [`docs/RELEASE.md`](docs/RELEASE.md).
 
-## Mobil (Google Play · App Store)
+## Controls
 
-```bash
-npm run android          # web dosyalarını kopyalar, Android Studio'yu açar
-npm run android:bundle   # Play Store için imzalı .aab → android/app/build/outputs/bundle/release
-npm run ios              # Xcode'u açar (Mac + Xcode + Apple Developer hesabı gerekir)
-```
+| Key | Action | Touch |
+| --- | --- | --- |
+| A / D | Walk (Shift: run) | Swipe & hold left / right |
+| W | Jump · climb ladders | Flick up |
+| S | Crouch (silent, hide) | Swipe & hold down |
+| Space | Grab · bag · drop · load truck | Tap |
+| Q | Throw (distraction) | Long-press while holding an item |
+| E | Open safe · escape with the truck | Tap (contextual) |
+| F | Flashlight (aim with mouse) | Long-press |
+| M / Esc | Map / pause | Hold mini-map / ⏸ |
 
-- Uygulama kimliği `com.yazify.redcrime` (mağazaya ilk yüklemeden sonra değiştirilemez; istersen önce
-  `capacitor.config.json`, `package.json`, `android/app/build.gradle` ve Xcode'da değiştir).
-- Play imzası: `keytool -genkey -v -keystore android/red-crime-release.jks -alias redcrime -keyalg RSA -keysize 2048 -validity 10000`
-  ve `android/keystore.properties` dosyası (örnek `android/app/build.gradle` başında). Anahtarı ve şifreyi yedekle!
-- Gradle 8.14 için JDK 17 ya da 21 gerekir (Android Studio → Settings → Gradle JDK).
-- Her yeni sürümde `versionCode` / `versionName` (Android) ve Xcode'da Version / Build numarasını artır.
+## License
 
-## Reklam ve mağaza (yalnızca Android / iOS)
-
-Kod: `js/core/monetize.js` (`RC.Ads`, `RC.IAP`, `RC.Premium`), ekran: `js/scenes/store.js`, ayarlar: `Config.MONETIZATION`.
-
-- **Reklamlar (AdMob):** menülerde alt banner · sonuç ekranında "2X PARA" ödüllü video · her 3 soygunda bir tam ekran reklam. Premium'da hiçbiri yok.
-- **Ürünler** (Play Console ve App Store Connect'te bu kimliklerle aç):
-  | Kimlik | Tür | Fiyat | Verdiği |
-  | --- | --- | --- | --- |
-  | `redcrime_cash_500k` | tüketilebilir | 5 TL | $500.000 |
-  | `redcrime_cash_1m` | tüketilebilir | 10 TL | $1.000.000 |
-  | `redcrime_cash_2m` | tüketilebilir | 20 TL | $2.000.000 |
-  | `redcrime_premium` | tüketilemez (tek sefer) | 49,99 TL | reklamsız, +60 sn, +10 çuval yuvası, günlük $50.000 |
-- **Yayından önce** test kimliklerini değiştir: `Config.MONETIZATION.admob` (reklam birimleri, `testing: false`),
-  `android/app/src/main/AndroidManifest.xml` ve `ios/App/App/Info.plist` (AdMob uygulama kimliği). Sonra `npm run mobile:sync`.
-- Tarayıcıda denemek için `?iaptest=1`: satın almalar ve ödüllü reklam taklit edilir.
+All rights reserved.
