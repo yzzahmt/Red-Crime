@@ -791,6 +791,14 @@
         A.tone({ type: 'sawtooth', freq: (240 - i * 20) * p, freqEnd: (320 - i * 30) * p, dur: 0.18, vol: 0.1 * v, pan, delay: i * 0.17, filter: 'lowpass', filterFreq: 1800 });
       }
     },
+    /** Görüldün: uyumsuz iki ton + alçak vuruş (gerilim) */
+    sting(A, v) {
+      A.tone({ type: 'sawtooth', freq: 233, freqEnd: 220, dur: 0.9, vol: 0.1 * v, filter: 'lowpass', filterFreq: 1800, attack: 0.01 });
+      A.tone({ type: 'sawtooth', freq: 247, freqEnd: 233, dur: 0.9, vol: 0.1 * v, filter: 'lowpass', filterFreq: 1800, attack: 0.01 });
+      A.tone({ type: 'square', freq: 466, dur: 0.18, vol: 0.06 * v, filter: 'lowpass', filterFreq: 3000 });
+      A.tone({ type: 'sine', freq: 70, freqEnd: 40, dur: 0.7, vol: 0.4 * v });
+      A.noise({ filter: 'lowpass', freq: 600, freqEnd: 100, dur: 0.5, vol: 0.25 * v });
+    },
     alarm(A, v) {
       for (let i = 0; i < 4; i++) {
         A.tone({ type: 'square', freq: i % 2 ? 880 : 660, dur: 0.22, vol: 0.07 * v, delay: i * 0.22, filter: 'lowpass', filterFreq: 2500 });

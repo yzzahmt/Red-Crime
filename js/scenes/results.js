@@ -27,6 +27,10 @@
       this.leaving = false;
       this.particles = new RC.Particles(800);
       this.res = RC.Save.recordHeist(p.level, p.value, p.stars, p.items.length, p.stats.safeOpened);
+      // Soygun notu: en iyisi kaydedilir, ilk S'de ödül
+      this.rank = RC.Rank.compute(p);
+      this.rankRes = this.rank.grade ? RC.Rank.record(p.level, this.rank.idx) : { newBest: false, reward: 0 };
+      this.stampAt = -1;
       this.sorted = p.items.slice().sort((a, b) => b.value - a.value);
       this.final = !!this.cfg.final && p.stars > 0;
       this.finalFail = !!this.cfg.final && p.stars === 0;
@@ -128,6 +132,15 @@
         }
       }
       // Yıldızlar
+      // Not mührü: yıldızlardan sonra "vurulur"
+      if (this.countDone && this.rank.grade && this.stampAt < 0 && this.starsShown >= p.stars && this.t - this.countDoneT > 0.55 + p.stars * 0.45) {
+        this.stampAt = this.t;
+        RC.Audio.play('thud', { vol: 1, intensity: 0.8 });
+        if (this.rank.grade === 'S') {
+          RC.Audio.play('win', { vol: 0.7 });
+          this.particles.confetti(RC.Game.W / 2 + 330, 120, 60, 200);
+        } else RC.Audio.play('star', { pitch: 0.8 });
+      }
       if (this.countDone && this.starsShown < p.stars && this.t - this.countDoneT > 0.3 + this.starsShown * 0.45) {
         this.starsShown++;
         RC.Audio.play('star', { pitch: 1 + this.starsShown * 0.12 });
@@ -178,6 +191,48 @@
         const a = 0.7 + Math.sin(t * 6) * 0.3;
         D.text(ctx, 'YENİ REKOR!', w / 2 + 230, 214, { size: 18, font: C.FONT_TITLE, align: 'center', color: '#3ddc84', alpha: a });
       }
+      // Not mührü + kriterler
+      if (this.rank.grade && this.stampAt >= 0) {
+        const g = this.rank.grade;
+        const col = RC.Rank.COLORS[g];
+        const k = U.clamp01((t - this.stampAt) / 0.22);
+        const sc = 2.6 - 1.6 * U.ease.outCubic(k);
+        const rx = w / 2 + 330;
+        const ry = 118;
+        ctx.save();
+        ctx.translate(rx, ry);
+        ctx.rotate(-0.12);
+        ctx.scale(sc, sc);
+        ctx.globalAlpha = Math.min(1, k * 2);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, 42, 0, U.TAU);
+        ctx.stroke();
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 36, 0, U.TAU);
+        ctx.stroke();
+        ctx.fillStyle = U.rgba(col, 0.12);
+        ctx.fill();
+        D.text(ctx, g, 0, 22, { size: 64, font: C.FONT_TITLE, align: 'center', color: col, stroke: '#000', strokeW: 4 });
+        ctx.restore();
+        const a = U.clamp01((t - this.stampAt - 0.3) / 0.4);
+        ctx.globalAlpha = a;
+        D.text(ctx, RC.L('NOT · {s}/100', { s: this.rank.score }), rx, ry + 62, { size: 13, align: 'center', color: '#9aa3c7', weight: 'bold' });
+        this.rank.checks.forEach((c, i) => {
+          const cy = ry + 82 + i * 16;
+          D.text(ctx, c.ok ? '✓' : '✗', rx - 92, cy, { size: 13, color: c.ok ? '#3ddc84' : '#ff5060', weight: 'bold' });
+          D.text(ctx, RC.L(c.label), rx - 78, cy, { size: 12, color: c.ok ? '#dfe3f5' : '#7a829e' });
+        });
+        if (this.rankRes.reward) {
+          const pa = 0.75 + Math.sin(t * 6) * 0.25;
+          D.text(ctx, RC.L('İLK S ÖDÜLÜ +{v}', { v: U.formatShortMoney(this.rankRes.reward) }), w / 2 - 330, 128, { size: 20, font: C.FONT_TITLE, align: 'center', color: C.COLORS.gold, alpha: pa * a });
+        } else if (this.rankRes.newBest && RC.Rank.best(p.level) !== 'D') {
+          D.text(ctx, RC.L('YENİ EN İYİ NOT'), w / 2 - 330, 128, { size: 18, font: C.FONT_TITLE, align: 'center', color: col, alpha: a });
+        }
+        ctx.globalAlpha = 1;
+      }
       // Eşeyler listesi
       const lw = Math.min(520, w * 0.44);
       const lx = w / 2 - lw - 20;
@@ -213,6 +268,7 @@
         ['safe', 'Kasa', st.safeOpened ? 'AÇILDI ✓' : st.keyFound ? 'Anahtar bulundu' : 'Açılmadı'],
         ['zzz', 'Uyandırma sayısı', String(st.woken)],
         ['eye', 'Görülme', String(st.spotted)],
+        ['star', 'En iyi kombo', st.bestCombo > 1 ? 'x' + st.bestCombo + (st.comboBonus ? ' (+' + U.formatShortMoney(st.comboBonus) + ')' : '') : '—'],
         ['fragile', 'Kırılan eşya', st.broken ? `${st.broken} (-${U.formatShortMoney(st.brokenValue)})` : RC.L('Yok ✓')],
         ['bag', 'Geride kalan', p.lostValue ? U.formatMoney(p.lostValue) : p.bagValue ? U.formatMoney(p.bagValue) + ' (çuvalda)' : '—'],
       ];

@@ -1331,6 +1331,22 @@
   "Helikopter geliyor! Dışarıdaysan içeri gir ya da saklan.": "Helicopter incoming! If you are outside, get in or hide.",
   "HELİKOPTER SENİ GÖRDÜ! Polis {t} içinde burada!": "THE HELICOPTER SPOTTED YOU! Police arrive in {t}!",
   "SİGORTA ALARMI! Polis {t} içinde burada!": "INSURANCE ALARM! Police arrive in {t}!",
-  "{n} uyandı! Elektrik yok, fenerle arıyor!": "{n} woke up! No power, searching with a flashlight!"
+  "{n} uyandı! Elektrik yok, fenerle arıyor!": "{n} woke up! No power, searching with a flashlight!",
+  // Kombo, ödül anları ve soygun notu
+  "KOMBO x{n} +%{p}": "COMBO x{n} +{p}%",
+  "KOMBO x{n}": "COMBO x{n}",
+  "EFSANEVİ!": "LEGENDARY!",
+  "EPİK!": "EPIC!",
+  "GÖRÜLDÜN!": "SPOTTED!",
+  "Kaç ya da saklan!": "Run or hide!",
+  "Hiç görünmeden": "Never spotted",
+  "Kimseyi uyandırmadan": "Nobody woken",
+  "Hiçbir şey kırmadan": "Nothing broken",
+  "Polis çağrılmadan": "Police never called",
+  "Hızlı (sürenin %60'ı)": "Fast (under 60% of the time)",
+  "NOT · {s}/100": "GRADE · {s}/100",
+  "İLK S ÖDÜLÜ +{v}": "FIRST S BONUS +{v}",
+  "YENİ EN İYİ NOT": "NEW BEST GRADE",
+  "En iyi kombo": "Best combo"
 });
 })(window.RC);

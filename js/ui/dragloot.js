@@ -186,6 +186,7 @@
         if (overBag && it.small && p.bag.length < p.bagCap) {
           it.state = 'bag';
           p.bag.push(it);
+          RC.HeistFX.onLoot(scene, it);
           RC.Audio.play('bag', { vol: 0.8 });
           scene.particles.text(p.cx, p.y - 10, '+' + U.formatMoney(it.value), { color: it.rarity.color, size: 15, life: 1 });
           scene.makeNoise(p.cx, p.cy, 0.03 * p.shoeMul, 'grab');

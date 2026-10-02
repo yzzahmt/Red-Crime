@@ -80,6 +80,7 @@
       this.sirenT = 0;
       this.dangerLevel = 0;
       RC.Hazards.init(this);
+      RC.HeistFX.init(this);
       this.heartT = 0;
       this.prompts = [];
       this.creakFlash = 0;
@@ -268,6 +269,7 @@
 
     onHeliSpotted() {
       this.stats.spotted++;
+      RC.HeistFX.onSpotted(this);
       this.camera.shake(0.3);
       RC.Audio.play('alarm', { vol: 0.7 });
       if (!this.policeCalled) {
@@ -278,6 +280,7 @@
 
     onSpotted(r) {
       this.stats.spotted++;
+      RC.HeistFX.onSpotted(this);
       // Bekçiler telsizle anında haber verir; ev sahipleri önce 911'i arar (Resident.beginCall)
       if (r && r.isGuard && !this.policeCalled) this.callPolice(r, 60);
     },
@@ -336,6 +339,7 @@
 
     onPickup(it) {
       this.activeItems.delete(it);
+      RC.HeistFX.onLoot(this, it);
       if (it.room && !it.fromContainer) it.room.stolen = (it.room.stolen || 0) + 1;
       if (this.tutorial) this.tutorial.stats.pickups++;
     },
@@ -757,6 +761,9 @@
       // Kamyon sensiz gittiyse soygun başarısız: yıldız yok, sonraki bölüm açılmaz
       const stars = this.leftBehind ? 0 : this.cfg.stars.filter((v) => this.loadedValue >= v).length;
       const lost = this.leftBehind ? p.bagValue + (p.held ? p.held.value : 0) : 0;
+      this.stats.bestCombo = this.fx ? this.fx.best : 0;
+      this.stats.comboBonus = this.fx ? this.fx.bonus : 0;
+      this.stats.police = this.policeCalled;
       RC.Game.go('results', {
         level: this.levelIndex,
         value: this.loadedValue,
@@ -764,6 +771,7 @@
         stars,
         stats: this.stats,
         timeUsed: this.totalTime - Math.max(0, this.timeLeft),
+        timeTotal: this.totalTime,
         leftBehind: this.leftBehind,
         lostValue: lost,
         bagValue: p.bagValue,
@@ -780,7 +788,7 @@
         this.updatePause(rawDt);
         return;
       }
-      const dt = rawDt * this.slowmo;
+      const dt = rawDt * this.slowmo * RC.HeistFX.update(this, rawDt);
       this.time += dt;
       this.stateT += rawDt;
       const p = this.player;
@@ -1308,10 +1316,12 @@
 
       // Sinematik son işlem (renk tonu, vinyet, gren)
       this.lighting.post(ctx, this, Wd, Hd);
+      RC.HeistFX.renderFlash(ctx, this, Wd, Hd);
 
       // Arayüz
-      RC.HUD.toastY = this.tutorial && this.tutorial.active ? 200 : 104;
+      RC.HUD.toastY = this.tutorial && this.tutorial.active ? 200 : this.fx && this.fx.combo >= 2 ? 158 : 104;
       RC.HUD.render(ctx, this, Wd, Hd);
+      RC.HeistFX.renderOverlay(ctx, this, Wd, Hd);
       if (this.tutorial && this.state !== 'paused') this.tutorial.render(ctx, Wd);
       if (this.bigMap) {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';

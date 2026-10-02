@@ -38,6 +38,12 @@
       this.y = y;
     }
 
+    /** Ani yakınlaşma vuruşu (önemli anlarda); zoom kendiliğinden geri döner */
+    punch(amount) {
+      if (RC.Save && !RC.Save.settings.shake) return;
+      this.zoom *= 1 + amount;
+    }
+
     shake(amount) {
       if (RC.Save && !RC.Save.settings.shake) return;
       this.trauma = Math.min(1, this.trauma + amount);

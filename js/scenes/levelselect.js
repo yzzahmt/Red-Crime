@@ -183,6 +183,7 @@
         const rx = cx + (cw - cw * s) / 2;
         const ry = cy + (ch - ch * s) / 2;
         this.cardRects.push({ x: rx, y: ry, w: cw * s, h: ch * s });
+        if (cx > w + 20 || cx + cw < -20) return; // ekran dışı kartı çizme (30 bölüm)
         ctx.save();
         ctx.translate(cx + cw / 2, cy + ch / 2);
         ctx.scale(s, s);
@@ -212,6 +213,20 @@
         nameLines.slice(0, 2).forEach((ln, j) => D.text(ctx, ln, 0, -ch / 2 + 214 + j * 20, { size: 16, font: C.FONT_TITLE, align: 'center', color: '#fff' }));
         D.text(ctx, cfg.short, 0, -ch / 2 + 258, { size: 13, align: 'center', color: '#9aa3c7' });
         D.stars(ctx, 0, ch / 2 - 22, p.stars[i], 3, 20);
+        // En iyi soygun notu rozeti
+        const best = !locked && RC.Rank.best(i);
+        if (best) {
+          const col = RC.Rank.COLORS[best];
+          const bx = -cw / 2 + 32;
+          const by = -ch / 2 + 40;
+          U.circle(ctx, bx, by, 19, 'rgba(0,0,0,0.75)');
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(bx, by, 17, 0, U.TAU);
+          ctx.stroke();
+          D.text(ctx, best, bx, by + 10, { size: 26, font: C.FONT_TITLE, align: 'center', color: col });
+        }
         if (locked) {
           ctx.fillStyle = 'rgba(0,0,0,0.55)';
           U.fillRoundRect(ctx, -cw / 2, -ch / 2, cw, ch, 12);

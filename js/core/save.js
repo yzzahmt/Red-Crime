@@ -40,6 +40,7 @@
         safesOpened: 0,
         upgrades: { shoes: 0, flashlight: 0, bag: 0, strength: 0, safecracker: 0, lungs: 0 },
         seenBriefing: new Array(RC.Config.LEVELS.length).fill(false),
+        ranks: new Array(RC.Config.LEVELS.length).fill(0), // en iyi soygun notu (1..5 = D..S)
         tutorialDone: false,
         finalAttempts: 0,
         finalLevel: RC.Config.LEVELS.length, // hangi bölümün final olduğu (kayıt göçü için)
@@ -67,7 +68,7 @@
           // Eski kayıtlardaki kısa dizileri 10 bölüme tamamla
           const p = this.data.progress;
           const d = defaults().progress;
-          for (const k of ['best', 'stars', 'seenBriefing']) {
+          for (const k of ['best', 'stars', 'seenBriefing', 'ranks']) {
             while (p[k].length < d[k].length) p[k].push(d[k][p[k].length]);
           }
           // 30 bölüm: final 15. sıradan sona taşındı. Eski finalin rekoru yeni 15. bölüme
