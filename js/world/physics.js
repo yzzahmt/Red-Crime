@@ -300,5 +300,76 @@
     return true;
   }
 
-  RC.Physics = { StaticGrid, DynamicGrid, moveBody, spaceFree, surfaceBelow, lineOfSight };
+  /**
+   * Işık konisi: (x, y) noktasından aim ± spread aralığına n ışın atar, her ışın
+   * görüşü kapatan ilk katı cisimde (duvar, döşeme, kapalı kapı) durur.
+   * Dönüş: koninin çokgen köşeleri [x0, y0, x1, y1, ...] (merkez hariç).
+   */
+  const coneTmp = [];
+  const coneBoxes = [];
+  const conePts = [];
+  function castCone(grid, x, y, aim, spread, range, n) {
+    // Koninin sınır kutusundaki adayları bir kez topla
+    const a0 = aim - spread;
+    const a1 = aim + spread;
+    let minX = x;
+    let maxX = x;
+    let minY = y;
+    let maxY = y;
+    for (let i = 0; i <= 4; i++) {
+      const a = a0 + ((a1 - a0) * i) / 4;
+      const ex = x + Math.cos(a) * range;
+      const ey = y + Math.sin(a) * range;
+      if (ex < minX) minX = ex;
+      if (ex > maxX) maxX = ex;
+      if (ey < minY) minY = ey;
+      if (ey > maxY) maxY = ey;
+    }
+    grid.query(minX, minY, maxX - minX + 1, maxY - minY + 1, coneTmp);
+    coneBoxes.length = 0;
+    for (const b of coneTmp) if (b.type === 'solid' && b.blocksSight) coneBoxes.push(b);
+    conePts.length = 0;
+    for (let i = 0; i <= n; i++) {
+      const a = a0 + ((a1 - a0) * i) / n;
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      let best = range;
+      for (let j = 0; j < coneBoxes.length; j++) {
+        const t = rayBox(x, y, dx, dy, coneBoxes[j], best);
+        if (t < best) best = t;
+      }
+      conePts.push(x + dx * best, y + dy * best);
+    }
+    return conePts;
+  }
+
+  /** Işın-dikdörtgen kesişimi (slab yöntemi); kesişme yoksa max döner */
+  function rayBox(x, y, dx, dy, b, max) {
+    let tmin = 0;
+    let tmax = max;
+    if (Math.abs(dx) < 1e-9) {
+      if (x < b.x || x > b.x + b.w) return max;
+    } else {
+      let t1 = (b.x - x) / dx;
+      let t2 = (b.x + b.w - x) / dx;
+      if (t1 > t2) [t1, t2] = [t2, t1];
+      if (t1 > tmin) tmin = t1;
+      if (t2 < tmax) tmax = t2;
+      if (tmin > tmax) return max;
+    }
+    if (Math.abs(dy) < 1e-9) {
+      if (y < b.y || y > b.y + b.h) return max;
+    } else {
+      let t1 = (b.y - y) / dy;
+      let t2 = (b.y + b.h - y) / dy;
+      if (t1 > t2) [t1, t2] = [t2, t1];
+      if (t1 > tmin) tmin = t1;
+      if (t2 < tmax) tmax = t2;
+      if (tmin > tmax) return max;
+    }
+    // Işık kaynağı bir cismin içindeyse (ör. kapı eşiği) o cismi yok say
+    return tmin > 0 ? tmin : max;
+  }
+
+  RC.Physics = { StaticGrid, DynamicGrid, moveBody, spaceFree, surfaceBelow, lineOfSight, castCone };
 })(window.RC);

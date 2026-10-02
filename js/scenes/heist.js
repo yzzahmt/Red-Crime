@@ -938,7 +938,17 @@
 
       // Kamera
       const followY = p.bodyY - 70;
-      this.camera.follow(p.cx, followY, dt, p.vx);
+      // Oynanışa göre ince zoom: koşarken geniş, saklanınca/çömelince yakın, tehlikede gergin
+      const cam = this.camera;
+      let dz = 1;
+      if (p.running && Math.abs(p.vx) > 220) dz = 0.94;
+      else if (p.hidden) dz = 1.08;
+      else if (p.crouch) dz = 1.04;
+      dz *= 1 + U.clamp01(this.dangerLevel) * 0.04;
+      cam.dynZoom = U.damp(cam.dynZoom, dz, 1.5, dt);
+      cam.sway = 1;
+      const aiming = p.flashOn && RC.Save.settings.mouseAim && RC.Input.mouseRecentlyUsed(4);
+      cam.follow(p.cx, followY, dt, p.vx, aiming ? p.aim : null);
       this.camera.update(rawDt);
       RC.Audio.listener.x = this.camera.x;
       RC.Audio.listener.y = this.camera.y;

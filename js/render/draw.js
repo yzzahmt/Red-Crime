@@ -37,48 +37,64 @@
   };
 
   Draw.panel = (ctx, x, y, w, h, o = {}) => {
-    const r = o.r == null ? 12 : o.r;
+    // Taktik arayüz: keskin köşeler, koyu antrasit gövde, ince köşe işaretleri
+    const r = Math.min(o.r == null ? 4 : o.r, 4);
     if (o.shadow !== false) {
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      U.fillRoundRect(ctx, x + 4, y + 6, w, h, r);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      U.fillRoundRect(ctx, x + 3, y + 4, w, h, r);
     }
     if (o.gradient !== false) {
       const g = ctx.createLinearGradient(x, y, x, y + h);
-      g.addColorStop(0, o.fillTop || 'rgba(34,40,72,0.94)');
-      g.addColorStop(1, o.fill || 'rgba(14,17,34,0.94)');
+      g.addColorStop(0, o.fillTop || 'rgba(26,28,35,0.93)');
+      g.addColorStop(1, o.fill || 'rgba(10,11,15,0.95)');
       ctx.fillStyle = g;
     } else {
-      ctx.fillStyle = o.fill || 'rgba(14,17,34,0.94)';
+      ctx.fillStyle = o.fill || 'rgba(10,11,15,0.95)';
     }
     U.fillRoundRect(ctx, x, y, w, h, r);
     if (o.border !== false) {
-      ctx.lineWidth = o.borderW || 2;
-      ctx.strokeStyle = o.border || 'rgba(255,255,255,0.12)';
-      U.strokeRoundRect(ctx, x + 1, y + 1, w - 2, h - 2, r);
+      ctx.lineWidth = o.borderW || 1;
+      ctx.strokeStyle = o.border || 'rgba(255,255,255,0.09)';
+      U.strokeRoundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r);
+      // Köşe işaretleri
+      if (w > 40 && h > 30) {
+        const L = Math.min(10, w / 6, h / 4);
+        ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x + 1, y + L);
+        ctx.lineTo(x + 1, y + 1);
+        ctx.lineTo(x + L, y + 1);
+        ctx.moveTo(x + w - L, y + h - 1);
+        ctx.lineTo(x + w - 1, y + h - 1);
+        ctx.lineTo(x + w - 1, y + h - L);
+        ctx.stroke();
+      }
     }
     if (o.accent) {
       ctx.fillStyle = o.accent;
-      U.fillRoundRect(ctx, x, y, w, 4, 2);
+      ctx.fillRect(x, y, w, 3);
     }
   };
 
   Draw.bar = (ctx, x, y, w, h, t, o = {}) => {
     t = U.clamp01(t);
-    ctx.fillStyle = o.bg || 'rgba(0,0,0,0.5)';
-    U.fillRoundRect(ctx, x, y, w, h, h / 2);
+    const br = Math.min(2, h / 2);
+    ctx.fillStyle = o.bg || 'rgba(0,0,0,0.55)';
+    U.fillRoundRect(ctx, x, y, w, h, br);
     if (t > 0) {
       const g = ctx.createLinearGradient(x, y, x + w, y);
       g.addColorStop(0, o.from || C.COLORS.red);
       g.addColorStop(1, o.to || C.COLORS.gold);
       ctx.fillStyle = o.color || g;
-      U.fillRoundRect(ctx, x, y, Math.max(h, w * t), h, h / 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.25)';
-      U.fillRoundRect(ctx, x + 2, y + 1, Math.max(0, w * t - 4), h * 0.35, h / 4);
+      U.fillRoundRect(ctx, x, y, Math.max(2, w * t), h, br);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillRect(x, y, Math.max(0, w * t), Math.max(1, h * 0.3));
     }
     if (o.border) {
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1;
       ctx.strokeStyle = o.border;
-      U.strokeRoundRect(ctx, x, y, w, h, h / 2);
+      U.strokeRoundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, br);
     }
   };
 

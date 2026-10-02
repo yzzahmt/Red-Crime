@@ -22,6 +22,10 @@
       this.viewH = 720;
       this.time = 0;
       this.followSpeed = 5;
+      this.dynZoom = 1; // oynanışa göre ince zoom (koşu, saklanma, tehlike)
+      this.aimX = 0; // nişan yönüne kayma
+      this.aimY = 0;
+      this.sway = 0; // el kamerası salınımı (0..1)
     }
 
     setView(w, h) {
@@ -39,15 +43,18 @@
       this.trauma = Math.min(1, this.trauma + amount);
     }
 
-    follow(tx, ty, dt, vx = 0) {
+    follow(tx, ty, dt, vx = 0, aim = null) {
       this.lookAhead = U.damp(this.lookAhead, U.clamp(vx * 0.35, -140, 140), 2.5, dt);
-      this.x = U.damp(this.x, tx + this.lookAhead, this.followSpeed, dt);
-      this.y = U.damp(this.y, ty, this.followSpeed * 0.9, dt);
+      // Nişan alınan yöne (el feneri) hafifçe kay
+      this.aimX = U.damp(this.aimX, aim ? Math.cos(aim) * 60 : 0, 3, dt);
+      this.aimY = U.damp(this.aimY, aim ? Math.sin(aim) * 40 : 0, 3, dt);
+      this.x = U.damp(this.x, tx + this.lookAhead + this.aimX, this.followSpeed, dt);
+      this.y = U.damp(this.y, ty + this.aimY, this.followSpeed * 0.9, dt);
     }
 
     update(dt) {
       this.time += dt;
-      this.zoom = U.damp(this.zoom, this.targetZoom, 4, dt);
+      this.zoom = U.damp(this.zoom, this.targetZoom * this.dynZoom, 4, dt);
       if (this.bounds) {
         const hw = this.viewW / 2 / this.zoom;
         const hh = this.viewH / 2 / this.zoom;
@@ -62,6 +69,12 @@
       const t = this.time * 40;
       this.shakeX = (U.noise1(t) - 0.5) * 2 * 22 * s;
       this.shakeY = (U.noise1(t + 100) - 0.5) * 2 * 22 * s;
+      // El kamerası: yavaş, düşük genlikli salınım (sabit tripod hissini kırar)
+      if (this.sway > 0 && !(RC.Save && !RC.Save.settings.shake)) {
+        const st = this.time * 0.35;
+        this.shakeX += (U.noise1(st + 300) - 0.5) * 2 * 5 * this.sway;
+        this.shakeY += (U.noise1(st + 700) - 0.5) * 2 * 3.5 * this.sway;
+      }
     }
 
     /** ctx'e kamera dönüşümünü uygular (çağıran save/restore yapmalı) */

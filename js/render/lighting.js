@@ -53,6 +53,28 @@
       const t = scene.time;
       const p = scene.player;
 
+      // Işık konileri bu karede bir kez hesaplanır (duvar, döşeme ve kapalı kapılarda kesilir)
+      const q0 = RC.Save.settings.quality;
+      const rays = q0 === 'low' ? 32 : q0 === 'medium' ? 56 : 96;
+      this.pCone = null;
+      if (p.flashOn) {
+        // Işınlar gövde merkezinden atılır: el duvara/kapıya gömülse bile ışık oradan sızmaz
+        const hp = p.handPos;
+        const ox = p.cx;
+        const oy = p.bodyY;
+        this.pCone = { x: hp.x, y: hp.y, pts: RC.Physics.castCone(W.grid, ox, oy, p.aim, p.flashSpread, p.flashRange + Math.hypot(hp.x - ox, hp.y - oy), rays).slice() };
+        // El, gövdeyle el arasındaki bir engelin ötesindeyse koni tamamen kapanır
+        if (!RC.Physics.lineOfSight(W.grid, ox, oy, hp.x, hp.y)) this.pCone.pts = [hp.x, hp.y];
+      }
+      this.gCones = [];
+      for (const r of scene.residents) {
+        if (!r.isGuard || r.state === 'knocked') continue;
+        const gx = r.x + r.facing * 34;
+        const gy = r.y - 25;
+        const a0 = r.facing > 0 ? 0.05 : Math.PI - 0.05;
+        this.gCones.push({ x: gx, y: gy, pts: RC.Physics.castCone(W.grid, gx, gy, a0, 0.3, 460, Math.round(rays / 2)).slice() });
+      }
+
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
       ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -149,16 +171,12 @@
         const clipped = clipFloor(ctx);
         const hp = p.handPos;
         const range = p.flashRange;
-        const spread = p.flashSpread;
         const g = ctx.createRadialGradient(hp.x, hp.y, 4, hp.x, hp.y, range);
         g.addColorStop(0, 'rgba(0,0,0,1)');
         g.addColorStop(0.6, 'rgba(0,0,0,0.85)');
         g.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.moveTo(hp.x, hp.y);
-        ctx.arc(hp.x, hp.y, range, p.aim - spread, p.aim + spread);
-        ctx.closePath();
+        conePath(ctx, this.pCone);
         ctx.fill();
         if (clipped) ctx.restore();
       }
@@ -166,20 +184,14 @@
       // Ev sahiplerinin çevresi (uyanıkken görünmeleri için hafif) + bekçi fenerleri
       for (const r of scene.residents) {
         if (r.state !== 'sleep') radial(ctx, r.x, r.y - 30, 70, 0.35);
-        if (r.isGuard && r.state !== 'knocked') {
-          const gx = r.x + r.facing * 34;
-          const gy = r.y - 25;
-          const a0 = r.facing > 0 ? 0.05 : Math.PI - 0.05;
-          const g = ctx.createRadialGradient(gx, gy, 4, gx, gy, 460);
-          g.addColorStop(0, 'rgba(0,0,0,0.95)');
-          g.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.moveTo(gx, gy);
-          ctx.arc(gx, gy, 460, a0 - 0.3, a0 + 0.3);
-          ctx.closePath();
-          ctx.fill();
-        }
+      }
+      for (const gc of this.gCones) {
+        const g = ctx.createRadialGradient(gc.x, gc.y, 4, gc.x, gc.y, 460);
+        g.addColorStop(0, 'rgba(0,0,0,0.95)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        conePath(ctx, gc);
+        ctx.fill();
       }
       // Gece görüş gözlüğü
       if (RC.Save.hasPerm('nightvision')) radial(ctx, p.cx, p.cy, 330, 0.7);
@@ -232,11 +244,25 @@
         g.addColorStop(0.75, 'rgba(255,214,150,0.05)');
         g.addColorStop(1, 'rgba(255,214,150,0)');
         mainCtx.fillStyle = g;
-        mainCtx.beginPath();
-        mainCtx.moveTo(hp.x, hp.y);
-        mainCtx.arc(hp.x, hp.y, range, p.aim - p.flashSpread, p.aim + p.flashSpread);
-        mainCtx.closePath();
+        conePath(mainCtx, this.pCone);
         mainCtx.fill();
+        // Işığın çarptığı yüzeylerde parlak lekeler (duvar, kapı, döşeme)
+        const pts = this.pCone.pts;
+        const nr = pts.length / 2 - 1;
+        if (q !== 'low') {
+          for (let i = 0; i <= nr; i += 4) {
+            const ex = pts[i * 2];
+            const ey = pts[i * 2 + 1];
+            const d = Math.hypot(ex - hp.x, ey - hp.y);
+            if (d > range - 2) continue;
+            const a = 0.22 * (1 - d / range);
+            const hg = mainCtx.createRadialGradient(ex, ey, 0, ex, ey, 26);
+            hg.addColorStop(0, `rgba(255,230,180,${a})`);
+            hg.addColorStop(1, 'rgba(255,230,180,0)');
+            mainCtx.fillStyle = hg;
+            mainCtx.fillRect(ex - 26, ey - 26, 52, 52);
+          }
+        }
         // Huzme içinde süzülen toz zerreleri
         const motes = q === 'high' ? 46 : q === 'medium' ? 22 : 0;
         for (let i = 0; i < motes; i++) {
@@ -245,6 +271,9 @@
           const h3 = hash(i * 39.425);
           const d = range * (0.12 + 0.82 * ((h1 + t * (0.01 + h3 * 0.02)) % 1));
           const a = p.aim + p.flashSpread * (h2 * 2 - 1) * 0.9 + Math.sin(t * 0.7 + i) * 0.02;
+          // Bu açıdaki ışın nerede kesiliyor? Ötesindeki zerreler görünmez
+          const ri = Math.round(((a - (p.aim - p.flashSpread)) / (2 * p.flashSpread)) * nr);
+          if (ri >= 0 && ri <= nr && d > Math.hypot(pts[ri * 2] - hp.x, pts[ri * 2 + 1] - hp.y)) continue;
           const x = hp.x + Math.cos(a) * d;
           const y = hp.y + Math.sin(a) * d + Math.sin(t * (0.6 + h3) + i * 2) * 6;
           const tw = 0.5 + 0.5 * Math.sin(t * (1.5 + h1 * 2) + i);
@@ -261,19 +290,12 @@
         if (clipped2) mainCtx.restore();
       }
       // Bekçi fenerleri: soğuk beyaz huzme
-      for (const r of scene.residents) {
-        if (!r.isGuard || r.state === 'knocked') continue;
-        const gx = r.x + r.facing * 34;
-        const gy = r.y - 25;
-        const a0 = r.facing > 0 ? 0.05 : Math.PI - 0.05;
-        const g = mainCtx.createRadialGradient(gx, gy, 4, gx, gy, 460);
+      for (const gc of this.gCones) {
+        const g = mainCtx.createRadialGradient(gc.x, gc.y, 4, gc.x, gc.y, 460);
         g.addColorStop(0, 'rgba(220,235,255,0.2)');
         g.addColorStop(1, 'rgba(220,235,255,0)');
         mainCtx.fillStyle = g;
-        mainCtx.beginPath();
-        mainCtx.moveTo(gx, gy);
-        mainCtx.arc(gx, gy, 460, a0 - 0.3, a0 + 0.3);
-        mainCtx.closePath();
+        conePath(mainCtx, gc);
         mainCtx.fill();
       }
       if (hl > 0) {
@@ -334,6 +356,34 @@
     const t = scene.time;
     const danger = U.clamp01(scene.dangerLevel || 0);
     ctx.save();
+    // Bloom: parlak bölgeleri küçük tamponda ayıkla, bulanıklaştır, ekran modunda geri bindir
+    // Zayıf cihaz koruması: kare hızı uzun süre düşükse bloom kendiliğinden kapanır
+    const fps = RC.Game.fps || 60;
+    this.slowT = fps < 45 ? (this.slowT || 0) + 1 / Math.max(fps, 1) : 0;
+    if (this.slowT > 3) this.noBloom = true;
+    if (q === 'high' && !this.noBloom && 'filter' in ctx) {
+      const src = ctx.canvas;
+      const bw = Math.max(1, Math.ceil(src.width / 4));
+      const bh = Math.max(1, Math.ceil(src.height / 4));
+      if (!this.bloom) {
+        this.bloom = document.createElement('canvas');
+        this.bctx = this.bloom.getContext('2d');
+      }
+      if (this.bloom.width !== bw || this.bloom.height !== bh) {
+        this.bloom.width = bw;
+        this.bloom.height = bh;
+      }
+      const b = this.bctx;
+      b.filter = 'none';
+      b.clearRect(0, 0, bw, bh);
+      // Eşik: koyu tonlar kontrastla siyaha iner, yalnız ışıklar kalır
+      b.filter = 'brightness(0.85) contrast(2.6) saturate(1.3) blur(4px)';
+      b.drawImage(src, 0, 0, src.width, src.height, 0, 0, bw, bh);
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(this.bloom, 0, 0, w, h);
+      ctx.globalAlpha = 1;
+    }
     if (q !== 'low') {
       // Renkleri biraz söndür: çizgi film doygunluğu yerine gerçekçi, soğuk bir palet
       ctx.globalCompositeOperation = 'saturation';
@@ -400,6 +450,15 @@
   function hash(n) {
     const x = Math.sin(n) * 43758.5453;
     return x - Math.floor(x);
+  }
+
+  /** castCone çokgenini yola dök (merkez + kesilmiş ışın uçları) */
+  function conePath(c, cone) {
+    const pts = cone.pts;
+    c.beginPath();
+    c.moveTo(cone.x, cone.y);
+    for (let i = 0; i < pts.length; i += 2) c.lineTo(pts[i], pts[i + 1]);
+    c.closePath();
   }
 
   function radial(ctx, x, y, r, a) {

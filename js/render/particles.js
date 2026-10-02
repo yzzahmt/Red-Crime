@@ -98,7 +98,8 @@
           rot: U.rand(0, U.TAU),
           vr: U.rand(-12, 12),
           color: U.pick(colors),
-          life: U.rand(1.5, 3),
+          // Kırık parçalar bir süre yerde enkaz olarak kalır
+          life: U.rand(6, 10),
           floorY,
           bounce: 0.3,
         });
@@ -258,7 +259,14 @@
             p.vy = 0;
             p.g = 0;
             p.vx *= 0.8;
+            p.resting = true;
           }
+        }
+        // Yerde duran parçalar sürtünmeyle durur (buz üstünde kayar gibi gitmesin)
+        if (p.resting) {
+          const f = Math.exp(-9 * dt);
+          p.vx *= f;
+          p.vr *= f;
         }
       }
       for (let i = this.texts.length - 1; i >= 0; i--) {

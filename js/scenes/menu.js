@@ -108,7 +108,18 @@
       }
       this.rain.render(ctx, 0.25);
       this.particles.render(ctx, null);
-      D.vignette(ctx, w, h, 0.75);
+      // Oyun içiyle aynı sinematik ton: daha az doygun, daha koyu, soğuk gölgeler
+      if (RC.Save.settings.quality !== 'low') {
+        ctx.save();
+        ctx.globalCompositeOperation = 'saturation';
+        ctx.fillStyle = 'rgba(128,128,128,0.35)';
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = 'rgba(70,76,96,0.35)';
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+      }
+      D.vignette(ctx, w, h, 0.85);
     },
   };
   RC.MenuBG = MenuBG;

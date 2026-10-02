@@ -738,6 +738,26 @@
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.fillRect(0, h - bh - 2, w, 2);
     }
+    // Ortam gölgelemesi (AO): duvar-zemin ve duvar-tavan birleşimleri ile köşeler kararır
+    {
+      const fl = ctx.createLinearGradient(0, h - 70, 0, h);
+      fl.addColorStop(0, 'rgba(0,0,0,0)');
+      fl.addColorStop(1, 'rgba(0,0,0,0.3)');
+      ctx.fillStyle = fl;
+      ctx.fillRect(0, h - 70, w, 70);
+      const cl = ctx.createLinearGradient(0, 0, 0, 60);
+      cl.addColorStop(0, 'rgba(0,0,0,0.34)');
+      cl.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = cl;
+      ctx.fillRect(0, 0, w, 60);
+      for (const [cx, cy] of [[0, 0], [w, 0], [0, h], [w, h]]) {
+        const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 110);
+        cg.addColorStop(0, 'rgba(0,0,0,0.28)');
+        cg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = cg;
+        ctx.fillRect(cx - 110, cy - 110, 220, 220);
+      }
+    }
     return c;
   }
 

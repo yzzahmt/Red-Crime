@@ -46,33 +46,38 @@
       const primary = this.primary;
       // Parıltı
       if (h > 0.05) {
-        ctx.shadowColor = primary ? C.COLORS.red : '#4aa8ff';
-        ctx.shadowBlur = 24 * h;
+        ctx.shadowColor = C.COLORS.red;
+        ctx.shadowBlur = 20 * h;
       }
       const g = ctx.createLinearGradient(0, y, 0, y + this.h);
       if (primary) {
-        g.addColorStop(0, U.mix('#ff4458', '#ff6a78', h));
-        g.addColorStop(1, U.mix('#b01828', '#d02030', h));
+        g.addColorStop(0, U.mix('#c4182c', '#e0283c', h));
+        g.addColorStop(1, U.mix('#6e0b16', '#8f1020', h));
       } else {
-        g.addColorStop(0, U.mix('#262c4c', '#34406e', h));
-        g.addColorStop(1, U.mix('#151a30', '#1e2544', h));
+        g.addColorStop(0, U.mix('#23262e', '#2f333d', h));
+        g.addColorStop(1, U.mix('#111216', '#181a20', h));
       }
       ctx.fillStyle = g;
-      U.fillRoundRect(ctx, x, y, this.w, this.h, 12);
+      U.fillRoundRect(ctx, x, y, this.w, this.h, 3);
       ctx.shadowBlur = 0;
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = primary ? 'rgba(255,200,200,0.5)' : U.rgba('#8fb7ff', 0.2 + h * 0.5);
-      U.strokeRoundRect(ctx, x + 1, y + 1, this.w - 2, this.h - 2, 12);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = primary ? 'rgba(255,140,150,0.55)' : `rgba(255,255,255,${0.08 + h * 0.22})`;
+      U.strokeRoundRect(ctx, x + 0.5, y + 0.5, this.w - 1, this.h - 1, 3);
+      // Seçili: solda kırmızı şerit
+      if (h > 0.05 && !primary) {
+        ctx.fillStyle = U.rgba(C.COLORS.red, h);
+        ctx.fillRect(x, y, 4, this.h);
+      }
       // Işık şeridi (hover animasyonu)
       if (h > 0.05) {
         ctx.save();
         ctx.beginPath();
-        U.roundRect(ctx, x, y, this.w, this.h, 12);
+        U.roundRect(ctx, x, y, this.w, this.h, 3);
         ctx.clip();
         const sx = x + ((t * 400) % (this.w + 200)) - 100;
         const lg = ctx.createLinearGradient(sx - 60, 0, sx + 60, 0);
         lg.addColorStop(0, 'rgba(255,255,255,0)');
-        lg.addColorStop(0.5, `rgba(255,255,255,${0.18 * h})`);
+        lg.addColorStop(0.5, `rgba(255,255,255,${0.12 * h})`);
         lg.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = lg;
         ctx.fillRect(x, y, this.w, this.h);
