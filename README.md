@@ -20,6 +20,14 @@
 Sneak into a sleeping household, grab the most valuable loot you can carry and load it onto the truck before the
 timer runs out — without waking anyone up.
 
+<p align="center">
+  <img src="docs/screenshots/heist-house.jpg" alt="Breaking into a procedurally generated house" width="100%">
+</p>
+<p align="center">
+  <img src="docs/screenshots/menu.jpg" alt="Main menu" width="49%">
+  <img src="docs/screenshots/heist-street.jpg" alt="Arriving at the target house" width="49%">
+</p>
+
 ## Highlights
 
 - **No engine, no framework.** ~27k lines of hand-written JavaScript: game loop, scene manager, physics, rendering,
