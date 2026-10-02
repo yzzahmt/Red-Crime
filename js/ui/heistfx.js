@@ -17,6 +17,12 @@
   const COMBO_STEP = 0.05;
   const COMBO_MAX = 1.5;
 
+  /** Yüzde bonus metni: Türkçede "+%15", İngilizcede "+15%" */
+  function pct(mul) {
+    const p = Math.round((mul - 1) * 100);
+    return RC.I18N.lang === 'en' ? '+' + p + '%' : '+%' + p;
+  }
+
   const HeistFX = {
     init(scene) {
       scene.fx = {
@@ -69,7 +75,7 @@
         if (bonus > 0) {
           it.value += bonus;
           f.bonus += bonus;
-          scene.particles.text(it.cx, it.y - 26, RC.L('KOMBO x{n} +%{p}', { n: f.combo, p: Math.round((mul - 1) * 100) }), { color: '#ffc83d', size: 14, life: 1 });
+          scene.particles.text(it.cx, it.y - 26, RC.L('KOMBO x{n}', { n: f.combo }) + ' ' + pct(mul), { color: '#ffc83d', size: 14, life: 1 });
         }
         RC.Audio.play('tick', { vol: 0.5, pitch: 1 + Math.min(f.combo, 12) * 0.08, minGap: 0 });
       }
@@ -154,7 +160,7 @@
         ctx.scale(s, s);
         const col = f.combo >= 8 ? '#ff3043' : f.combo >= 5 ? '#ff8c2e' : '#ffc83d';
         D.text(ctx, RC.L('KOMBO x{n}', { n: f.combo }), 0, 0, { size: 26, font: C.FONT_TITLE, align: 'center', color: col, stroke: 'rgba(0,0,0,0.85)', strokeW: 5 });
-        D.text(ctx, '+%' + Math.round((mul - 1) * 100), 0, 18, { size: 13, align: 'center', color: '#f2f4ff', weight: 'bold', stroke: 'rgba(0,0,0,0.85)', strokeW: 3 });
+        D.text(ctx, pct(mul), 0, 18, { size: 13, align: 'center', color: '#f2f4ff', weight: 'bold', stroke: 'rgba(0,0,0,0.85)', strokeW: 3 });
         ctx.restore();
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillRect(cx - 60, y + 26, 120, 4);

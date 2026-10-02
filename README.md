@@ -12,33 +12,47 @@
   <img src="https://img.shields.io/badge/Canvas_2D-no_engine-e8283c" alt="Canvas 2D">
   <img src="https://img.shields.io/badge/Electron-desktop-47848f?logo=electron&logoColor=white" alt="Electron">
   <img src="https://img.shields.io/badge/Capacitor-Android_%7C_iOS-119eff?logo=capacitor&logoColor=white" alt="Capacitor">
-  <img src="https://img.shields.io/badge/version-1.4-informational" alt="Version 1.4">
+  <img src="https://img.shields.io/badge/version-1.5-informational" alt="Version 1.5">
 </p>
 
 ---
 
 Sneak into a sleeping household, grab the most valuable loot you can carry and load it onto the truck before the
-timer runs out — without waking anyone up.
+timer runs out — without waking anyone up. 30 contracts take you from a retired teacher's house to the national
+treasury, each with its own security layout and special rules.
 
 <p align="center">
-  <img src="docs/screenshots/heist-house.jpg" alt="Breaking into a procedurally generated house" width="100%">
+  <img src="docs/screenshots/interior-flashlight.jpg" alt="Raycast flashlight inside a procedurally generated house" width="100%">
 </p>
 <p align="center">
-  <img src="docs/screenshots/menu.jpg" alt="Main menu" width="49%">
-  <img src="docs/screenshots/heist-street.jpg" alt="Arriving at the target house" width="49%">
+  <img src="docs/screenshots/helicopter-searchlight.jpg" alt="Police helicopter sweeping the yard" width="49%">
+  <img src="docs/screenshots/legendary-loot.jpg" alt="Loot combo and a legendary find" width="49%">
+</p>
+<p align="center">
+  <img src="docs/screenshots/level-select.jpg" alt="Contract selection with special rules" width="98%">
 </p>
 
 ## Highlights
 
-- **No engine, no framework.** ~27k lines of hand-written JavaScript: game loop, scene manager, physics, rendering,
+- **No engine, no framework.** ~29k lines of JavaScript with no engine or framework: game loop, scene manager, physics, rendering,
   input and audio are all implemented in-house.
 - **Procedural levels.** Every house is generated from a level config: floors, rooms, stairs, basements, gardens,
   pools, safes and keys, furnished from 40+ furniture types and 100+ item definitions across multiple visual themes.
 - **Resident & guard AI.** A finite-state machine (`sleep → waking → investigate → search → sweep → chase → return`,
   plus `patrol` for guards) with multi-floor pathfinding, door handling and a noise-driven wake-up meter.
   A tracking dog follows the player's scent.
-- **Stealth systems.** Sound propagation, creaky floorboards, flashlight cones and dynamic lighting, security cameras
-  with blind spots, a heat system and lock-breaching minigames (drill, safe dial, lockpick).
+- **Stealth systems.** Sound propagation, creaky floorboards, security cameras with blind spots, lasers, motion
+  sensors, pressure plates, a heat system and lock-breaching minigames (drill, safe dial, lockpick).
+- **Raycast 2D lighting.** Flashlights and guard torches are cast against walls, floors and closed doors, so light
+  stops where it should and leaves bright hit spots; bloom, ambient occlusion and a cinematic color grade on top.
+- **30 levels, each with a twist.** Difficulty ramps through security density, AI count and special rules:
+  thunderstorms (lightning reveals you, thunder masks your noise), a police helicopter searchlight, sleepless
+  residents who wander at night, blackouts with phone flashlights, insurance sensors that call the police on any
+  breakage, and short clocks. Loot targets are calibrated by generating each level and measuring what it holds.
+- **Game feel.** Material-based item physics (bounce, friction, damped settling), coyote time and jump buffering,
+  weight inertia, a reactive camera, loot combos, slow-motion reward moments and a tense "spotted" beat.
+- **Replay loop.** Every heist is graded S–D on stars, stealth, clean hands, police and speed; the best grade is
+  shown on the contract card and the first S pays a bonus.
 - **Synthesized audio.** Sound effects and music are generated at runtime with the Web Audio API — no audio files.
 - **Two control schemes.** Keyboard + mouse, and a joystick-free, gesture-based touch layer for phones and tablets.
 - **Localization.** Turkish and English with a first-run language picker.
@@ -58,11 +72,11 @@ timer runs out — without waking anyone up.
 ```
 js/
 ├── main.js        game loop and scene manager with fade transitions
-├── core/          config, input, touch gestures, audio synth, save, i18n, monetization
-├── world/         level generator, physics, furniture & item definitions, security, heat
+├── core/          config (30 levels), input, touch, audio synth, save, grades, i18n, monetization
+├── world/         level generator, physics + raycasting, items & furniture, security, heat, special rules
 ├── entities/      player, resident / guard AI, dog, items
 ├── render/        camera, lighting, particles, backgrounds, character & world rendering
-├── ui/            HUD, mini-map, widgets, minigames, drag-to-loot, tutorial
+├── ui/            HUD, mini-map, widgets, minigames, drag-to-loot, tutorial, combo & reward effects
 └── scenes/        intro, menu, planning, briefing, truck ride, heist, results, store …
 desktop/           Electron main & preload
 android/  ios/     Capacitor native projects

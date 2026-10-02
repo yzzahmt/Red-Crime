@@ -197,7 +197,7 @@
         const col = RC.Rank.COLORS[g];
         const k = U.clamp01((t - this.stampAt) / 0.22);
         const sc = 2.6 - 1.6 * U.ease.outCubic(k);
-        const rx = w / 2 + 330;
+        const rx = Math.min(w / 2 + 400, w - 130); // "YENİ REKOR" ile çakışmasın
         const ry = 118;
         ctx.save();
         ctx.translate(rx, ry);
