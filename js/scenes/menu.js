@@ -284,7 +284,7 @@
       D.panel(ctx, 20, h - 64, 280, 46, { r: 10 });
       D.icon(ctx, 'money', 44, h - 41, 22, C.COLORS.gold);
       D.text(ctx, U.formatMoney(p.wallet), 64, h - 34, { size: 20, font: C.FONT_TITLE, color: C.COLORS.gold });
-      D.text(ctx, 'v1.4 · ' + ({ win32: 'Windows', darwin: 'macOS', linux: 'Linux', android: 'Android', ios: 'iOS' }[RC.Platform.os] || 'Web'), w - 24, h - 92, { size: 12, align: 'right', color: '#5a6284' });
+      D.text(ctx, 'v1.5 · ' + ({ win32: 'Windows', darwin: 'macOS', linux: 'Linux', android: 'Android', ios: 'iOS' }[RC.Platform.os] || 'Web'), w - 24, h - 92, { size: 12, align: 'right', color: '#5a6284' });
       if (!RC.Touch.active) D.text(ctx, '↑↓ seç · ENTER onayla', w / 2, h - 24, { size: 13, align: 'center', color: '#5a6284' });
     },
   };
