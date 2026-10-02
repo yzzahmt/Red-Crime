@@ -89,7 +89,7 @@
           r: 26,
           body: '#e8283c',
           facing: 1,
-          balaclava: '#1c1d26',
+          balaclava: '#1c1d26', operator: true,
           look: { x: Math.cos(aim), y: Math.sin(aim) },
           mouth: 'smile',
           blink: Math.sin(t * 1.3) > 0.98 ? 1 : 0,

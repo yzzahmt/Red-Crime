@@ -312,7 +312,7 @@
         r: 60,
         body: '#e8283c',
         facing: 1,
-        balaclava: '#1c1d26',
+        balaclava: '#1c1d26', operator: true,
         eyes: 'open',
         mouth: 'worried',
         look: { x: Math.sin(t) * 0.4, y: 0.3 },

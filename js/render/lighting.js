@@ -332,23 +332,40 @@
   Lighting.prototype.post = function (ctx, scene, w, h) {
     const q = RC.Save.settings.quality;
     const t = scene.time;
+    const danger = U.clamp01(scene.dangerLevel || 0);
     ctx.save();
+    if (q !== 'low') {
+      // Renkleri biraz söndür: çizgi film doygunluğu yerine gerçekçi, soğuk bir palet
+      ctx.globalCompositeOperation = 'saturation';
+      ctx.fillStyle = `rgba(128,128,128,${0.3 - danger * 0.12})`;
+      ctx.fillRect(0, 0, w, h);
+      // Kontrast: koyu tonları derinleştir
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = 'rgba(70,78,100,0.22)';
+      ctx.fillRect(0, 0, w, h);
+    }
     if (q === 'high') {
       // Gölgelerde soğuk mavi, ışıklarda sıcak ton (soft-light)
       ctx.globalCompositeOperation = 'soft-light';
       const cg = ctx.createLinearGradient(0, 0, 0, h);
-      cg.addColorStop(0, 'rgba(40,70,150,0.3)');
-      cg.addColorStop(1, 'rgba(255,170,110,0.16)');
+      cg.addColorStop(0, 'rgba(30,60,140,0.38)');
+      cg.addColorStop(1, 'rgba(255,160,100,0.14)');
       ctx.fillStyle = cg;
+      ctx.fillRect(0, 0, w, h);
+    }
+    // Tehlike: görüntü kırmızıya döner
+    if (danger > 0.3) {
+      ctx.globalCompositeOperation = 'soft-light';
+      ctx.fillStyle = `rgba(200,10,25,${(danger - 0.3) * 0.5})`;
       ctx.fillRect(0, 0, w, h);
     }
     // Vinyet
     ctx.globalCompositeOperation = 'source-over';
     const r = Math.hypot(w, h) / 2;
-    const vg = ctx.createRadialGradient(w / 2, h / 2, r * 0.45, w / 2, h / 2, r * 1.02);
+    const vg = ctx.createRadialGradient(w / 2, h / 2, r * 0.4, w / 2, h / 2, r * 1.02);
     vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(0.7, 'rgba(0,0,6,0.22)');
-    vg.addColorStop(1, 'rgba(0,0,6,0.55)');
+    vg.addColorStop(0.65, 'rgba(0,0,6,0.3)');
+    vg.addColorStop(1, 'rgba(0,0,6,0.72)');
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, w, h);
     // Film greni

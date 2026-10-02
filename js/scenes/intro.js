@@ -187,6 +187,7 @@
     const glitch = opts.glitch || 0;
     ctx.save();
     ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left'; // harfler tek tek yerleştirilir; önceki çizimden kalan hizalama kaydırmasın
     ctx.font = `${size}px ${C.FONT_TITLE}`;
     const w1 = ctx.measureText(word1 + ' ').width;
     const w2 = ctx.measureText(word2).width;
@@ -455,7 +456,7 @@
           r: 30,
           body: '#e8283c',
           facing: 1,
-          balaclava: '#1c1d26',
+          balaclava: '#1c1d26', operator: true,
           eyes: 'open',
           blink: wink ? 1 : 0,
           mouth: t > 5.4 ? 'grin' : 'smile',

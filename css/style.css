@@ -16,7 +16,7 @@ html, body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: "Rubik", "Segoe UI", Arial, sans-serif;
+  font-family: "Barlow Semi Condensed", "Segoe UI", Arial, sans-serif;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
@@ -53,7 +53,7 @@ canvas#game {
   animation: pulse 1.2s ease-in-out infinite alternate;
 }
 #loader .title {
-  font-family: "Bungee", Impact, sans-serif;
+  font-family: "Bebas Neue", Impact, sans-serif;
   font-size: 44px;
   letter-spacing: 2px;
 }

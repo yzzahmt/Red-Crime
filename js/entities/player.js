@@ -161,8 +161,17 @@
       const dir = assistDir || (right ? 1 : 0) - (left ? 1 : 0);
       let maxSpeed = this.crouch ? 95 : this.running ? 300 * this.runMul : 200;
       maxSpeed *= this.speedMul;
-      const accel = this.onGround ? 2300 : 1300;
+      // Taşınan ağırlık ivmeyi düşürür (ağır ganimetle hantal hareket)
+      let accel = (this.onGround ? 2300 : 1300) / (1 + this.carriedKg * 0.025);
+      const reversing = dir !== 0 && Math.sign(this.vx) === -dir && Math.abs(this.vx) > 40;
+      if (reversing) accel *= 1.6; // dönüşler çevik olsun
       if (dir !== 0) {
+        // Koşarken ani dönüş: zeminde kayma tozu
+        if (reversing && this.onGround && Math.abs(this.vx) > 220 && !this.skidT) {
+          this.skidT = 0.25;
+          scene.particles.dust(this.cx - dir * 12, this.bottom, 6);
+          RC.Audio.play('step', { vol: 0.4, pitch: 0.8 });
+        }
         this.vx = U.approach(this.vx, dir * maxSpeed, accel * dt);
         this.facing = dir;
       } else {
@@ -170,7 +179,15 @@
       }
 
       /* ---------------- Zıplama / aşağı inme ---------------- */
-      if (jumpPressed && this.onGround && !this.stairAssist && !(this.stairAt() && this.stairAt().where === 'bottom')) {
+      // Coyote süresi: kenardan düştükten hemen sonra hâlâ zıplanabilir.
+      // Zıplama tamponu: yere değmeden az önce basılan zıplama kaybolmaz.
+      if (this.skidT) this.skidT = Math.max(0, this.skidT - dt);
+      this.coyoteT = this.onGround ? 0.1 : Math.max(0, (this.coyoteT || 0) - dt);
+      this.jumpBufT = jumpPressed ? 0.12 : Math.max(0, (this.jumpBufT || 0) - dt);
+      const canJump = this.onGround || (this.coyoteT > 0 && this.vy >= 0);
+      if (this.jumpBufT > 0 && canJump && !this.stairAssist && !(this.stairAt() && this.stairAt().where === 'bottom')) {
+        this.jumpBufT = 0;
+        this.coyoteT = 0;
         if (crouchHeld && this.ground && this.ground.type === 'oneway' && !this.ground.trapdoor) {
           this.dropThrough = 0.25;
           this.vy = 60;
@@ -191,7 +208,18 @@
       /* ---------------- Yerçekimi ---------------- */
       this.vy = Math.min(this.vy + C.GRAVITY * dt, 1300);
       const wasGround = this.onGround;
+      const vxBefore = this.vx;
       const res = RC.Physics.moveBody(this, dt, W.grid, { stepUp: C.STEP_UP, snap: 24 });
+
+      /* ---------------- Duvara çarpma ---------------- */
+      if (res.hitWall && Math.abs(vxBefore) > 260) {
+        const k = U.clamp((Math.abs(vxBefore) - 260) / 200, 0, 1);
+        this.anim.squashX = 0.85;
+        this.anim.squashY = 1.1;
+        RC.Audio.play('thud', { vol: 0.35 + k * 0.4, intensity: 0.3 + k * 0.4, minGap: 0.2 });
+        scene.camera.shake(0.08 + k * 0.12);
+        scene.makeNoise(this.cx, this.cy, (0.25 + k * 0.35) * this.shoeMul, 'land');
+      }
 
       /* ---------------- İniş ---------------- */
       if (res.landed && !wasGround) {
@@ -736,7 +764,7 @@
         eyes: this.stun > 0 ? 'closed' : this.scene.dangerLevel > 0.7 ? 'wide' : 'open',
         mouth: this.stun > 0 ? 'o' : this.held && this.held.kg > 8 ? 'worried' : this.scene.dangerLevel > 0.6 ? 'o' : 'smile',
         blink: a.blink > 0 ? 1 : 0,
-        balaclava: '#1c1d26',
+        balaclava: '#1c1d26', operator: true,
         arms: hands,
         sleeve: '#1d1f29',
         skin: '#f1c7a1',

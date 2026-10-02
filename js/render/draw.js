@@ -261,7 +261,11 @@
     return ret;
   };
 
+  /** Oyuncunun (operatör) renkleri: koyu kırmızı tulum, siyah eldiven ve kollar */
+  const OPERATOR = { body: '#b3141f', balaclava: '#17181d', sleeve: '#16171d', glove: '#0f0f12', skin: '#0f0f12' };
+
   Draw.character = (ctx, o) => {
+    if (o.operator) o = Object.assign({}, o, OPERATOR);
     const r = o.r || 22;
     const sx = o.sx || 1;
     const sy = o.sy || 1;
@@ -355,10 +359,11 @@
       ctx.beginPath();
       ctx.moveTo(-r, -r);
       ctx.lineTo(r, -r);
-      ctx.lineTo(r, r * 0.52);
+      const mb = o.operator ? 0.3 : 0.52; // maskenin alt kenarı (operatörde kırmızı tulum daha görünür)
+      ctx.lineTo(r, r * mb);
       for (let i = 8; i >= 0; i--) {
         const x = -r + (i / 8) * r * 2;
-        ctx.lineTo(x, r * 0.52 + (i % 2 ? 3 : -1));
+        ctx.lineTo(x, r * mb + (i % 2 ? 3 : -1));
       }
       ctx.closePath();
       ctx.fill();
@@ -367,7 +372,7 @@
       ctx.lineWidth = 1;
       for (let x = -r; x < r; x += r * 0.16) {
         ctx.beginPath();
-        for (let y = -r; y < r * 0.52; y += 4) {
+        for (let y = -r; y < r * mb; y += 4) {
           ctx.moveTo(x - 1.2, y);
           ctx.lineTo(x, y + 2.5);
           ctx.lineTo(x + 1.2, y);
@@ -376,11 +381,13 @@
       }
       // Boyun ribanası
       ctx.fillStyle = U.shade(bc, 0.08);
-      ctx.fillRect(-r, r * 0.4, r * 2, r * 0.14);
+      ctx.fillRect(-r, r * (mb - 0.12), r * 2, r * 0.14);
       ctx.strokeStyle = U.rgba('#000000', 0.35);
-      for (let x = -r; x < r; x += 3) U.line(ctx, x, r * 0.4, x, r * 0.54);
+      for (let x = -r; x < r; x += 3) U.line(ctx, x, r * (mb - 0.12), x, r * (mb + 0.02));
       ctx.restore();
     }
+
+    if (o.operator) drawOperatorGear(ctx, r, f, o);
 
     // Hacim: yumuşak parlama, alt yansıma ve kenar boyunca gölge halkası
     {
@@ -447,7 +454,9 @@
       ctx.fill();
     }
 
-    if (o.balaclava) {
+    if (o.operator) {
+      drawOperatorFace(ctx, r, o);
+    } else if (o.balaclava) {
       // Göz ve ağız delikleri (içinden ten görünür)
       const skin = o.faceSkin || '#e3ad86';
       ctx.fillStyle = skin;
@@ -461,8 +470,10 @@
       U.ellipse(ctx, 0, r * 0.32, r * 0.2, r * 0.14, 0);
       ctx.stroke();
     }
-    drawEyes(ctx, r, o);
-    drawMouth(ctx, r, o);
+    if (!o.operator) {
+      drawEyes(ctx, r, o);
+      drawMouth(ctx, r, o);
+    }
 
     if (o.mustache) {
       ctx.fillStyle = o.mustacheColor || '#3b2a1e';
@@ -509,6 +520,116 @@
 
     ctx.restore();
   };
+
+  /* ------------------------------------------------------------------
+   * Operatör (oyuncu): kar maskeli, taktik teçhizatlı ciddi hırsız.
+   * Gövde dönüşümü içinde, topun kendi koordinatlarında çizilir.
+   * ---------------------------------------------------------------- */
+  function drawOperatorGear(ctx, r, f, o) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, r - 0.5, 0, U.TAU);
+    ctx.clip();
+    // Kumaş dokusu (gövde)
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 0.8;
+    for (let x = -r * 2; x < r; x += 3) U.line(ctx, x, r * 0.5, x + r, r * 1.5);
+    // Gözlük kayışı (kafanın çevresinde)
+    ctx.fillStyle = '#0c0d10';
+    ctx.fillRect(-r, -r * 0.8, r * 2, r * 0.11);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(-r, -r * 0.8, r * 2, r * 0.025);
+    // Kemer + toka + cep
+    ctx.fillStyle = '#101115';
+    ctx.fillRect(-r, r * 0.78, r * 2, r * 0.13);
+    ctx.fillStyle = '#6d727c';
+    ctx.fillRect(f * r * 0.1 - r * 0.06, r * 0.78, r * 0.12, r * 0.13);
+    ctx.fillStyle = '#16171c';
+    U.fillRoundRect(ctx, -f * r * 0.42 - r * 0.12, r * 0.6, r * 0.24, r * 0.2, r * 0.04);
+    // Fermuar
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1.2;
+    U.line(ctx, f * r * 0.22, r * 0.32, f * r * 0.16, r * 0.78);
+    // Soğuk ay ışığı kenar parlaması (arka kenar) — siluete sertlik verir
+    ctx.strokeStyle = 'rgba(150,180,255,0.28)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (f > 0) ctx.arc(0, 0, r - 1.5, Math.PI * 0.95, Math.PI * 1.45);
+    else ctx.arc(0, 0, r - 1.5, -Math.PI * 0.45, Math.PI * 0.05);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawOperatorFace(ctx, r, o) {
+    const eyes = o.eyes || 'open';
+    const blink = o.blink || 0;
+    const lookX = o.look ? o.look.x : 0;
+    const lookY = o.look ? o.look.y : 0;
+    const wide = eyes === 'wide';
+    const shut = eyes === 'closed' || eyes === 'sleep' || blink > 0.5;
+    const skin = o.faceSkin || '#c99a78';
+    const mask = o.balaclava || '#17181d';
+    // Dar göz yarığı
+    const sy0 = -r * 0.3;
+    const sh = r * (wide ? 0.34 : 0.27);
+    ctx.fillStyle = U.shade(skin, -0.22);
+    ctx.beginPath();
+    U.roundRect(ctx, -r * 0.6, sy0, r * 1.2, sh, r * 0.1);
+    ctx.fill();
+    // Yarık içinde gözler (göz kapağı gölgesi üstten)
+    ctx.save();
+    ctx.clip();
+    const ey = sy0 + sh * 0.55;
+    for (const side of [-1, 1]) {
+      const x = side * r * 0.27;
+      if (shut) {
+        ctx.strokeStyle = '#1a1210';
+        ctx.lineWidth = 1.6;
+        U.line(ctx, x - r * 0.15, ey, x + r * 0.15, ey);
+        continue;
+      }
+      const ew = r * 0.17;
+      const eh = r * (wide ? 0.12 : 0.085);
+      U.ellipse(ctx, x, ey, ew, eh, 0, '#d9d3c9');
+      const ix = x + lookX * ew * 0.4;
+      const iy = ey + lookY * eh * 0.3;
+      U.circle(ctx, ix, iy, r * 0.075, '#2a1c12');
+      U.circle(ctx, ix, iy, r * 0.04, '#07070a');
+      U.circle(ctx, ix - r * 0.025, iy - r * 0.03, r * 0.018, 'rgba(255,255,255,0.85)');
+      // Çatık kaş / göz kapağı: içe doğru inen sert gölge
+      ctx.fillStyle = 'rgba(10,6,4,0.55)';
+      ctx.beginPath();
+      const inner = wide ? 0 : r * 0.06;
+      ctx.moveTo(x - side * r * 0.2, sy0 - 1);
+      ctx.lineTo(x + side * r * 0.2, sy0 - 1);
+      ctx.lineTo(x + side * r * 0.2, sy0 + r * 0.04);
+      ctx.lineTo(x - side * r * 0.2, sy0 + r * 0.04 + inner);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    // Yarık kenarı dikişi
+    ctx.strokeStyle = U.shade(mask, -0.5);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    U.roundRect(ctx, -r * 0.6, sy0, r * 1.2, sh, r * 0.1);
+    ctx.stroke();
+    // Alna kaldırılmış gece görüş gözlüğü
+    const gy = -r * 0.62;
+    const gg = ctx.createLinearGradient(0, gy - r * 0.16, 0, gy + r * 0.16);
+    gg.addColorStop(0, '#3a3d45');
+    gg.addColorStop(1, '#141519');
+    ctx.fillStyle = gg;
+    U.fillRoundRect(ctx, -r * 0.42, gy - r * 0.15, r * 0.84, r * 0.3, r * 0.08);
+    for (const side of [-1, 1]) {
+      const lx = side * r * 0.2;
+      U.circle(ctx, lx, gy, r * 0.11, '#0a0b0d');
+      U.circle(ctx, lx, gy, r * 0.075, '#123b2a');
+      U.circle(ctx, lx - r * 0.03, gy - r * 0.03, r * 0.025, 'rgba(160,255,200,0.6)');
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(-r * 0.38, gy - r * 0.14, r * 0.76, r * 0.04);
+  }
 
   function drawEyes(ctx, r, o) {
     const eyes = o.eyes || 'open';

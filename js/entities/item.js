@@ -33,6 +33,30 @@
     soft: 0.2,
   };
 
+  // Malzeme fiziği: sekme katsayısı (restitution) ve zemin sürtünmesi (1/sn)
+  const MAT_BOUNCE = {
+    glass: 0.18,
+    ceramic: 0.15,
+    metal: 0.32,
+    wood: 0.28,
+    stone: 0.08,
+    electronic: 0.14,
+    plastic: 0.42,
+    paper: 0.05,
+    soft: 0.1,
+  };
+  const MAT_FRICTION = {
+    glass: 5,
+    ceramic: 6,
+    metal: 5.5,
+    wood: 9,
+    stone: 12,
+    electronic: 8,
+    plastic: 7,
+    paper: 14,
+    soft: 16,
+  };
+
   let NEXT_ID = 1;
 
   class Item {
@@ -110,37 +134,74 @@
       this.vx = vx;
       this.vy = vy;
       this.gentle = gentle;
-      this.spin = gentle ? 0 : U.clamp(vx * 0.02, -8, 8);
+      // Hafif eşyalar daha hızlı döner; biraz rastgelelik fırlatışı doğal gösterir
+      this.spin = gentle ? 0 : U.clamp((vx * 0.022) / (1 + this.kg * 0.08) + U.rand(-1.5, 1.5), -12, 12);
       this.onGround = false;
       this.airTime = 0;
+      this.bounces = 0;
     }
 
     update(dt, scene) {
       if (this.state !== 'falling') return;
       const W = scene.world;
+      const mat = this.def.mat;
       this.airTime += dt;
       this.vy = Math.min(this.vy + C.GRAVITY * dt, 1600);
-      this.angle += this.spin * dt;
+      // Hava sürtünmesi: hafif ve geniş eşyalar (kâğıt, kumaş) yavaşlar
+      if (!this.onGround) {
+        const drag = mat === 'paper' || mat === 'soft' ? 1.6 : 0.15 / (1 + this.kg * 0.2);
+        this.vx *= Math.exp(-drag * dt);
+      }
+      const vxBefore = this.vx;
+      const wasGround = this.onGround;
       const res = RC.Physics.moveBody(this, dt, W.grid, { stepUp: 0 });
       if (res.hitWall) {
-        this.vx *= -0.35;
-        const loud = U.clamp(Math.abs(this.vx) / 700, 0, 0.6);
-        if (loud > 0.15) scene.makeNoise(this.cx, this.cy, loud * (MAT_LOUD[this.def.mat] || 1), 'item');
+        // Duvardan malzemeye göre sek; dönüş yönü değişir
+        this.vx = -vxBefore * (0.25 + (MAT_BOUNCE[mat] || 0.2));
+        this.spin = -this.spin * 0.6;
+        const loud = U.clamp(Math.abs(vxBefore) / 700, 0, 0.6);
+        if (loud > 0.15) {
+          scene.makeNoise(this.cx, this.cy, loud * (MAT_LOUD[mat] || 1), 'item');
+          RC.Audio.play(MAT_SOUND[mat] === 'glass' || MAT_SOUND[mat] === 'ceramic' ? 'place' : MAT_SOUND[mat] || 'thud', { x: this.cx, y: this.cy, vol: loud, intensity: loud, minGap: 0.05 });
+        }
       }
-      if (res.landed) {
+      // Zeminde dururken motor her karede "indi" der; yalnızca gerçek inişi say
+      if (res.landed && !wasGround) {
         this.onImpact(res.impact, scene);
         if (this.state === 'broken') return;
+        // Havada attığı turları sil: yaylı sallanma en yakın eşdeğer açıdan başlasın
+        this.angle = Math.atan2(Math.sin(this.angle), Math.cos(this.angle));
+        // Sekme: yeterince sert düştüyse malzemeye göre geri zıplar
+        const bounce = res.impact * (MAT_BOUNCE[mat] || 0.2) * (this.gentle ? 0.3 : 1);
+        if (bounce > 70 && this.bounces < 4) {
+          this.bounces++;
+          this.vy = -bounce;
+          this.onGround = false;
+          // Yere çarpınca dönüş, yatay hıza aktarılır (top gibi yuvarlanma hissi)
+          this.vx += U.clamp(this.spin * 6, -60, 60);
+          this.spin = this.spin * 0.5 + this.vx * 0.01;
+        } else {
+          // Yerine otururken açıyı en yakın dik konuma çeken yaylı sallanma
+          this.rock = this.spin * 0.5;
+        }
       }
       if (this.onGround) {
-        this.vx *= Math.exp(-10 * dt);
-        this.spin *= Math.exp(-12 * dt);
-        this.angle = U.damp(this.angle, 0, 12, dt);
-        if (Math.abs(this.vx) < 8) {
+        this.vx *= Math.exp(-(MAT_FRICTION[mat] || 9) * dt);
+        // Açısal yay: k = sertlik, c = sönüm → birkaç kez sallanıp durur
+        const k = 520;
+        const c = 12;
+        this.rock = (this.rock || 0) + (-k * this.angle - c * (this.rock || 0)) * dt;
+        this.angle += this.rock * dt;
+        this.spin = 0;
+        if (Math.abs(this.vx) < 8 && Math.abs(this.angle) < 0.01 && Math.abs(this.rock) < 0.2) {
           this.vx = 0;
           this.state = 'rest';
           this.angle = 0;
+          this.rock = 0;
           this.gentle = false;
         }
+      } else {
+        this.angle += this.spin * dt;
       }
       // Dünyanın dışına düştüyse son durduğu yere geri al (kamyon yanına değil)
       if (this.y > W.bounds.y + W.bounds.h + 400) {

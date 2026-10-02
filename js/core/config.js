@@ -33,8 +33,8 @@
     FINAL_ATTEMPTS: 2,
     DEVELOPER: 'Red Crime Studio', // geliştirici adı (jenerikte görünür)
 
-    FONT_TITLE: '"Bungee", "Impact", "Arial Black", sans-serif',
-    FONT_UI: '"Rubik", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+    FONT_TITLE: '"Bebas Neue", "Impact", "Arial Narrow", sans-serif',
+    FONT_UI: '"Barlow Semi Condensed", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
     FONT_MONO: '"Share Tech Mono", "Courier New", monospace',
 
     COLORS: {

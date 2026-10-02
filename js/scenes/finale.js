@@ -163,7 +163,7 @@
         sy: 0.8,
         body: '#e8283c',
         facing: 1,
-        balaclava: '#1c1d26',
+        balaclava: '#1c1d26', operator: true,
         eyes: this.phase === 'aim' ? 'wide' : 'open',
         mouth: 'worried',
         arms: [{ x: -14, y: -26 }, { x: 14, y: -26 }],
@@ -337,7 +337,7 @@
       ctx.fillRect(w * 0.08, by - 44, w * 0.42, 6);
       // Karakterler
       D.character(ctx, { x: w * 0.22, y: by - 64, r: 36, body: '#5a4a7a', facing: 1, sunglasses: true, mouth: 'grin', hat: 'fedora', hatColor: '#1c1c24', cigar: true, chain: true, arms: [{ x: -40, y: 14 }, { x: 44, y: -20 }], sleeve: '#2a2438', glove: '#1a1a1a', armThick: 9, t });
-      D.character(ctx, { x: w * 0.36, y: by - 50, r: 24, body: '#e8283c', facing: -1, balaclava: '#1c1d26', mouth: 'grin', arms: [{ x: -30, y: -30 }, { x: 30, y: -30 }], sleeve: '#1d1f29', glove: '#2a2d3e', t });
+      D.character(ctx, { x: w * 0.36, y: by - 50, r: 24, body: '#e8283c', facing: -1, balaclava: '#1c1d26', operator: true, mouth: 'grin', arms: [{ x: -30, y: -30 }, { x: 30, y: -30 }], sleeve: '#1d1f29', glove: '#2a2d3e', t });
       this.particles.render(ctx, null);
 
       if (this.phase === 'talk') {

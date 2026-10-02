@@ -69,7 +69,7 @@
       };
       // Yazı tiplerini bekle (en fazla 2 sn)
       const fontsReady = document.fonts && document.fonts.load
-        ? Promise.all([document.fonts.load('40px "Bungee"'), document.fonts.load('16px "Rubik"'), document.fonts.load('bold 16px "Rubik"')])
+        ? Promise.all([document.fonts.load('40px "Bebas Neue"'), document.fonts.load('500 16px "Barlow Semi Condensed"'), document.fonts.load('bold 16px "Barlow Semi Condensed"')])
         : Promise.resolve();
       Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2000))]).then(start, start);
     },
